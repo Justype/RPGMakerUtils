@@ -1,0 +1,32 @@
+﻿<UserControl x:Class="RPGMakerUtils.Views.AboutUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:RPGMakerUtils.Views"
+             xmlns:vm="clr-namespace:RPGMakerUtils.ViewModels"
+             Foreground="Black" Padding="10"
+             mc:Ignorable="d" d:Background="White" d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.DataContext>
+        <vm:CommonViewModel/>
+    </UserControl.DataContext>
+    <Grid>
+        <TextBlock LineHeight="30" TextWrapping="WrapWithOverflow">
+            <Run Text="RPG Maker Utils" FontSize="24" FontWeight="Bold"/>
+            <LineBreak/>
+            <Hyperlink Command="{Binding HyperlinkCommand}" CommandParameter="https://github.com/Justype/RPGMakerUtils">
+                Github 仓库
+            </Hyperlink>
+            <LineBreak/>
+            - 如果在使用中遇到问题，欢迎提交 issue 或者 pull request。
+            <LineBreak/>
+            - 但我比较懒，而且忙于生信分析，<Bold>一定</Bold>不会及时处理。
+            <LineBreak/>
+            - 如果对代码有不明白的地方可以结合搜索和AI助手进行学习。
+            <LineBreak/>
+            - 如果遇到了没有翻译的文本，请提交 Issue 并附上 <Bold>data.zip</Bold>，<Bold>js/plugins.js</Bold> 以及 <Bold>未翻译的文本</Bold>，或者直接给出插件的名字和要翻译的键值对，感谢 🤝！
+            <LineBreak/>
+            <Run Text="感谢使用与支持！" FontSize="18" FontWeight="Bold"/>
+        </TextBlock>
+    </Grid>
+</UserControl>

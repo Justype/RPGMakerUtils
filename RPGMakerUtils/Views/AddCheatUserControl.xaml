@@ -1,0 +1,49 @@
+﻿<UserControl x:Class="RPGMakerUtils.Views.AddCheatUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:RPGMakerUtils.Views"
+             xmlns:vm="clr-namespace:RPGMakerUtils.ViewModels"
+             xmlns:conv="clr-namespace:RPGMakerUtils.Converters"
+             Foreground="Black" Padding="10"
+             mc:Ignorable="d" d:Background="White" d:FontSize="16" d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <conv:VersionJsPathConverter x:Key="VersionJsPathConverter"/>
+        <conv:FileExistsConverter x:Key="FileExistsConverter"/>
+    </UserControl.Resources>
+    
+    <UserControl.DataContext>
+        <vm:AddCheatViewModel/>
+    </UserControl.DataContext>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="4*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock LineHeight="25" TextWrapping="WrapWithOverflow">
+            GitHub 仓库：
+            <Hyperlink Command="{Binding HyperlinkCommand}" CommandParameter="https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin">
+                paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin
+            </Hyperlink>
+            <LineBreak/>
+            - 会修改游戏的 main.js 文件，<Bold>会备份到<Run Text="{Binding GameVersion, Converter={StaticResource VersionJsPathConverter}}"/>/main.js.zip</Bold>。
+            <LineBreak/>
+            - 如果想要恢复，解压 <Bold>main.js.zip</Bold>，选择<Bold>解压到当前文件夹</Bold>，覆盖
+            <LineBreak/>
+            - 进入游戏按 <Bold>Ctrl + C</Bold> 打开作弊菜单
+            <LineBreak/>
+            - 常用组合键： <Bold>Ctrl + V</Bold> 直接胜利 / <Bold>Ctrl + D</Bold> 直接失败
+            <LineBreak/>
+            &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;<Bold>Alt + 1</Bold> 敌人1血 / <Bold>Alt + 9</Bold> 状态回满
+            <LineBreak/>
+            <LineBreak/>
+            如果按钮为灰色，可能原因： <LineBreak/>
+            1. 还没有加载游戏路径 <LineBreak/>
+            2. 没有找到 js 文件夹 <LineBreak/>
+            3. 已修改（<Run Text="{Binding GameVersion, Converter={StaticResource VersionJsPathConverter}}"/>/main.js.zip <Run Text="{Binding GameMainJsBackupPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>）
+        </TextBlock>
+
+        <Button Grid.Row="1" FontSize="20" Content="添加作弊" Command="{Binding AddCheatCommand}" Margin="0,5,0,0"/>
+    </Grid>
+</UserControl>

@@ -1,29 +1,67 @@
-# 找到RPG Maker MV 里的礼包码
+# RPG Maker MV MZ 帮助软件
 
-## WPF 版本
+本版本使用 .NET Framework 4.8 编写，支持 RPG Maker MV 和 RPG Maker MZ 的游戏。
 
-3种使用方法，任君挑选
+## 功能
 
-- 将运行文件放到游戏目录下运行
-- 将游戏目录（或者Game.exe）拖到exe文件
-- 将游戏目录（或者Game.exe）拖到窗口内
+1. 加载 MTools 的翻译 json 文件，并修改 data/*json 文件 和 js/plugins.js 文件
+2. 修改字体 （复制系统字体到 www/Fonts，并修改CSS）
+3. 添加作弊，使用的是 paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin 的代码
+4. 找游戏的宝箱密码
+5. 自动识别txt文件的编码格式，并转换为 UTF-8
 
-![使用方法](assets/1.png)
+## 使用方法
 
-![使用结果](assets/2.png)
+1. 直接下载 exe 文件
+2. 运行 exe 文件
+3. 选择游戏目录 和/或 翻译文件(json)
+4. 点击修改按钮
+5. 等待修改完成
 
-使用 .NET Framework 4.7，WIN10 和 WIN11 运行无压力，WIN7可能要安装运行环境
-
-## Python 版本
-
-使用方法，将`rpgmaker_giftcode.py`放到 `www/data` 文件夹下运行即可
+![Translate Page](./assets/1.png)
 
 # 原理
 
-原因：
+- data/*json 包含了所有的游戏数据
+- js/plugins.js 包含了所有的插件配置
 
-1. RPG Maker MV 里面的 `www/data/` 文件夹是存放所有游戏资源的目录
-2. 地图中的人物都在其单独的地图文件下，也就是`MapXX.json`
-3. 一般礼包码都是8位数，且是与地图上一个NPC对话后获得的
+只需要翻译 data/*json 文件 和 js/plugins.js 文件即可
 
-所以，只要遍历所有`MapXX.json`文件，选出其中包含`礼包码`这三个字的文件，并找出其中的8位数字即可。
+需要翻译的字段有：
+
+- `<Object>.json` (`Actors.json`, `Armors.json`, `Classes.json`, `Enemies.json`, `Items.json`, `MapInfos.json`, `Skills.json`, `States.json`, `Weapons.json`)
+  - `name`, `description`, `profile` and some `note`
+- `events.json` (`MapXXX.json`， `CommonEvents.json`)
+  - 对话、背景和选项 `code`: `101`，`401`, `102`，`402`, `405` 翻译所有 `parameters`
+  - 插件编码 `code`: `356` 和 `357` 使用白名单进行翻译
+- `js/plugins.js`
+  - 通过白名单进行翻译
+
+```json
+// 356 example
+{
+    "code": 356,
+    "indent": 1,
+    // D_TEXT is the plugin name
+    "parameters": ["D_TEXT こんだけ注目集めといてSじゃなかったら・・・ 12"]
+}
+
+// 357 example
+{
+  "code": 357,
+  "indent": 0,
+  "parameters": [
+    // DTextPicture is the plugin name
+    "DTextPicture",
+    "dText",
+    "文字列ピクチャ準備",
+    { "text": "ロレンチア\n", "fontSize": "0" }
+  ]
+}
+```
+
+# 鸣谢
+
+1. 感谢 davide97l/rpgmaker-mv-translator 提供的思路
+2. 感谢 paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin 提供的作弊代码
+
