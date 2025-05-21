@@ -6,7 +6,7 @@
 
 1. 加载 MTools 的翻译 json 文件，并修改 data/*json 文件 和 js/plugins.js 文件
 2. 修改字体 （复制系统字体到 www/Fonts，并修改CSS）
-3. 添加作弊，使用的是 paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin 的代码
+3. 添加作弊，使用的是 [paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin) 的代码
 4. 找游戏的宝箱密码
 5. 自动识别txt文件的编码格式，并转换为 UTF-8
 
@@ -18,7 +18,7 @@
 4. 点击修改按钮
 5. 等待修改完成
 
-![Translate Page](./assets/1.png)
+<image src="./assets/1.png" alt="Select Game Directory" width="300"/>
 
 # 原理
 
@@ -62,6 +62,6 @@
 
 # 鸣谢
 
-1. 感谢 davide97l/rpgmaker-mv-translator 提供的思路
-2. 感谢 paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin 提供的作弊代码
+1. 感谢 [davide97l/rpgmaker-mv-translator](https://github.com/davide97l/rpgmaker-mv-translator) 提供的思路
+2. 感谢 [paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin) 提供的作弊代码
 
