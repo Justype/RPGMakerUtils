@@ -2,6 +2,8 @@
 
 本版本使用 .NET Framework 4.8 编写，支持 RPG Maker MV 和 RPG Maker MZ 的游戏。
 
+[B站视频](https://www.bilibili.com/video/BV1hSJizWEkz/)： 使用方法与一些代码逻辑
+
 ## 功能
 
 1. 加载 MTools 的翻译 json 文件，并修改 data/*json 文件 和 js/plugins.js 文件
