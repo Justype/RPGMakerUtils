@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.IO;
 using RPGMakerUtils.ViewModels;
 using RPGMakerUtils.Resources;
 
@@ -22,6 +21,15 @@ namespace RPGMakerUtils
         {
             InitializeComponent();
             _viewModel = (MainViewModel)DataContext;
+            this.Loaded += MainWindow_Loaded;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(App.StartupDropPath))
+            {
+                FileIOUtils.HandleDropPath(App.StartupDropPath, App.StartupJsonSupport);
+            }
         }
 
 
@@ -80,25 +88,12 @@ namespace RPGMakerUtils
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 string[] droppedPaths = (string[])e.Data.GetData(DataFormats.FileDrop);
-
                 if (!_viewModel.IsRunning && droppedPaths != null && droppedPaths.Length > 0)
                 {
                     string path = droppedPaths[0];
-                    if (File.GetAttributes(path).HasFlag(FileAttributes.Directory))
-                        FileIOUtils.LoadGamePathAndSendMessage(path);
-                    else
-                    {
-                        string fileName = Path.GetFileName(path);
-                        string extension = Path.GetExtension(path)?.ToLower();
-
-                        if (fileName == "Game.exe")
-                            FileIOUtils.LoadGamePathAndSendMessage(path);
-                        else if (extension == ".json")
-                            FileIOUtils.LoadTranslatePathAndSendMessage(path);
-                    }
+                    FileIOUtils.HandleDropPath(path, jsonSupport: true);
                 }
             }
-
             e.Handled = true;
         }
         #endregion

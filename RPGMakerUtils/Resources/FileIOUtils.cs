@@ -14,6 +14,33 @@ namespace RPGMakerUtils.Resources
     internal class FileIOUtils
     {
         /// <summary>
+        /// Handle dropped path (directory, .exe, and optionally .json)
+        /// </summary>
+        public static void HandleDropPath(string path, bool jsonSupport = false)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+            if (Directory.Exists(path))
+            {
+                LoadGamePathAndSendMessage(path);
+                return;
+            }
+            if (File.Exists(path))
+            {
+                string extension = Path.GetExtension(path)?.ToLower();
+                string fileName = Path.GetFileName(path);
+                if (extension == ".exe" || fileName == "Game.exe")
+                {
+                    LoadGamePathAndSendMessage(path);
+                }
+                else if (jsonSupport && extension == ".json")
+                {
+                    LoadTranslatePathAndSendMessage(path);
+                }
+            }
+        }
+
+        /// <summary>
         /// Load the game path and send a message to update the game info.
         /// </summary>
         /// <param name="gamePath">Game Path or Game.exe Path</param>

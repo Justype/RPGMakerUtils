@@ -9,7 +9,7 @@
              Foreground="Black" Padding="10"
              mc:Ignorable="d" d:Background="White" d:FontSize="16" d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
-        <conv:VersionJsPathConverter x:Key="VersionJsPathConverter"/>
+        <conv:VersionWwwPathConverter x:Key="VersionWwwPathConverter"/>
         <conv:FileExistsConverter x:Key="FileExistsConverter"/>
     </UserControl.Resources>
     
@@ -21,13 +21,17 @@
             <RowDefinition Height="4*"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBlock LineHeight="25" TextWrapping="WrapWithOverflow">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock LineHeight="25" Grid.ColumnSpan="2" TextWrapping="WrapWithOverflow">
             GitHub 仓库：
             <Hyperlink Command="{Binding HyperlinkCommand}" CommandParameter="https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin">
                 paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin
             </Hyperlink>
             <LineBreak/>
-            - 会修改游戏的 main.js 文件，<Bold>会备份到<Run Text="{Binding GameVersion, Converter={StaticResource VersionJsPathConverter}}"/>/main.js.zip</Bold>。
+            - 会修改游戏的 main.js 文件，<Bold>会备份到<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>js/main.js.zip</Bold>。
             <LineBreak/>
             - 如果想要恢复，解压 <Bold>main.js.zip</Bold>，选择<Bold>解压到当前文件夹</Bold>，覆盖
             <LineBreak/>
@@ -41,9 +45,10 @@
             如果按钮为灰色，可能原因： <LineBreak/>
             1. 还没有加载游戏路径 <LineBreak/>
             2. 没有找到 js 文件夹 <LineBreak/>
-            3. 已修改（<Run Text="{Binding GameVersion, Converter={StaticResource VersionJsPathConverter}}"/>/main.js.zip <Run Text="{Binding GameMainJsBackupPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>）
+            3. 已修改（<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>js/main.js.zip <Run Text="{Binding GameMainJsBackupPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>）
         </TextBlock>
 
         <Button Grid.Row="1" FontSize="20" Content="添加作弊" Command="{Binding AddCheatCommand}" Margin="0,5,0,0"/>
+        <Button Grid.Row="1" Grid.Column="1" FontSize="20" Content="回退" Command="{Binding RestoreCommand}" Margin="5,5,0,0"/>
     </Grid>
 </UserControl>

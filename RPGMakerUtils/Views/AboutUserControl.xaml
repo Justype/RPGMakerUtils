@@ -22,9 +22,9 @@
             <LineBreak/>
             - 但我比较懒，而且忙于生信分析，<Bold>一定</Bold>不会及时处理。
             <LineBreak/>
-            - 如果对代码有不明白的地方可以结合搜索和AI助手进行学习。
+            - 如果使用翻译插件时，遇到了 <Bold>TranslationManager.XXX</Bold> is not a function 的错误，请直接提交Issue，我会尽快实现那个方法。
             <LineBreak/>
-            - 如果遇到了没有翻译的文本，请提交 Issue 并附上 <Bold>data.zip</Bold>，<Bold>js/plugins.js</Bold> 以及 <Bold>未翻译的文本</Bold>，或者直接给出插件的名字和要翻译的键值对，感谢 🤝！
+            - 如果使用替换翻译时，遇到了没有翻译的，请提交Issue并附上 <Bold>data.zip</Bold>，<Bold>js/plugins.js</Bold> 以及 <Bold>未翻译的文本</Bold>，有能力的请直接给出插件的名字和要翻译的键值对，感谢 🤝！
             <LineBreak/>
             <Run Text="感谢使用与支持！" FontSize="18" FontWeight="Bold"/>
         </TextBlock>

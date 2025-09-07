@@ -37,55 +37,7 @@ namespace RPGMakerUtils.ViewModels
 
         public IAsyncRelayCommand EditFontCommand { get; }
 
-        public EditFontViewModel()
-        {
-            EditFontCommand = new AsyncRelayCommand(EditFont, CanEditFont);
-
-            WeakReferenceMessenger.Default.Register<GameInfoUpdatedMessage>(this, (r, m) =>
-            {
-                GamePath = m.Value.GamePath;
-                GameVersion = m.Value.GameVersion;
-                EditFontCommand.NotifyCanExecuteChanged();
-                OnPropertyChanged(nameof(GameFontCssBackupPath));
-                OnPropertyChanged(nameof(GameFontsDirPath));
-                OnPropertyChanged(nameof(GameFontCssPath));
-            });
-
-            WeakReferenceMessenger.Default.Register<ProgramRunningMessage>(this, (r, m) =>
-            {
-                IsRunning = m.Value;
-                EditFontCommand.NotifyCanExecuteChanged();
-            });
-        }
-
-        private async Task EditFont()
-        {
-            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
-
-            await Task.Run(async () => {
-                await Utils.CreateZipFromFileAsync(GameFontCssPath, GameFontCssBackupPath);
-                File.Copy(FontPath, Path.Combine(GameFontsDirPath, Font), true);
-
-                /* // Edit gamefont.css to use msyh.ttc
-                 * // Replace the string in url
-                 * @font-face {
-                 *     font-family: GameFont;
-                 *     src: url("msyh.ttc");
-                 * }
-                 */
-
-                string fontUrlPattern = @"(@font-face\s*\{[^}]*?src:\s*url\("")[^""]+(""\))";
-                string replacement = $"$1{Font}$2";
-
-                string fontCssContent = File.ReadAllText(GameFontCssPath);
-                string newFontCssContent = System.Text.RegularExpressions.Regex.Replace(fontCssContent, fontUrlPattern, replacement, System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                File.WriteAllText(GameFontCssPath, newFontCssContent);
-            });
-
-            MessageBox.Show("字体修改成功", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
-        }
+        public IAsyncRelayCommand RestoreCommand { get; }
 
         public string GameFontsDirPath
         {
@@ -103,13 +55,6 @@ namespace RPGMakerUtils.ViewModels
                 }
             }
         }
-
-        public bool CanEditFont() =>
-            File.Exists(FontPath) &&
-                File.Exists(GameFontCssPath) &&
-                    GameVersion == RPGMakerVersion.MV &&
-                        !File.Exists(GameFontCssBackupPath) &&
-                            !IsRunning;
 
         public string GameFontCssPath
         {
@@ -145,5 +90,105 @@ namespace RPGMakerUtils.ViewModels
             }
         }
 
+        public EditFontViewModel()
+        {
+            EditFontCommand = new AsyncRelayCommand(EditFontAsync, CanEditFont);
+            RestoreCommand = new AsyncRelayCommand(RestoreAsync, CanRestore);
+
+            WeakReferenceMessenger.Default.Register<GameInfoUpdatedMessage>(this, (r, m) =>
+            {
+                GamePath = m.Value.GamePath;
+                GameVersion = m.Value.GameVersion;
+                EditFontCommand.NotifyCanExecuteChanged();
+                RestoreCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(GameFontCssBackupPath));
+                OnPropertyChanged(nameof(GameFontsDirPath));
+                OnPropertyChanged(nameof(GameFontCssPath));
+            });
+
+            WeakReferenceMessenger.Default.Register<ProgramRunningMessage>(this, (r, m) =>
+            {
+                IsRunning = m.Value;
+                EditFontCommand.NotifyCanExecuteChanged();
+                RestoreCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(GameFontCssBackupPath));
+            });
+        }
+
+        private async Task EditFontAsync()
+        {
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
+
+            await Task.Run(async () =>
+            {
+                try 
+                {
+                    await Utils.CreateZipFromFileAsync(GameFontCssPath, GameFontCssBackupPath);
+                    string targetFontPath = Path.Combine(GameFontsDirPath, Font);
+                    File.Copy(FontPath, Path.Combine(GameFontsDirPath, Font), true);
+
+                    /* // Edit gamefont.css to use msyh.ttc
+                     * // Replace the string in url
+                     * @font-face {
+                     *     font-family: GameFont;
+                     *     src: url("msyh.ttc");
+                     * }
+                     */
+
+                    string fontUrlPattern = @"(@font-face\s*\{[^}]*?src:\s*url\("")[^""]+(""\))";
+                    string replacement = $"$1{Font}$2";
+
+                    string fontCssContent = File.ReadAllText(GameFontCssPath);
+                    string newFontCssContent = System.Text.RegularExpressions.Regex.Replace(fontCssContent, fontUrlPattern, replacement, System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    File.WriteAllText(GameFontCssPath, newFontCssContent);
+                    MessageBox.Show("字体修改成功", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("无法创建字体目录，可能路径不正确或没有权限。\n" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            });
+
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
+        }
+
+        public bool CanEditFont() =>
+            File.Exists(FontPath) &&
+                File.Exists(GameFontCssPath) &&
+                    GameVersion == RPGMakerVersion.MV &&
+                        !File.Exists(GameFontCssBackupPath) &&
+                            !IsRunning;
+
+        private async Task RestoreAsync()
+        {
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
+
+            await Task.Run(async () =>
+            {
+                bool isSuccess = false;
+
+                if (File.Exists(GameFontCssBackupPath))
+                {
+                    isSuccess = await Utils.ExtractZipAsync(GameFontCssBackupPath, Path.GetDirectoryName(GameFontCssPath), overwrite: true);
+                    File.Delete(GameFontCssBackupPath);
+                }
+
+                if (isSuccess)
+                {
+                    MessageBox.Show("字体还原成功，请自己删除不用的字体", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("字体还原失败", "失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
+
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
+        }
+
+        private bool CanRestore() =>
+            File.Exists(GameFontCssBackupPath) &&
+                !IsRunning;
     }
 }

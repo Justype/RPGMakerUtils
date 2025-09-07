@@ -1,0 +1,47 @@
+﻿<UserControl x:Class="RPGMakerUtils.Views.TranslationPluginUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:RPGMakerUtils.Views"
+             xmlns:vm="clr-namespace:RPGMakerUtils.ViewModels"
+             xmlns:conv="clr-namespace:RPGMakerUtils.Converters"
+             Foreground="Black" Padding="10"
+             mc:Ignorable="d" d:Background="White" d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <conv:FileNameConverter x:Key="FileNameConverter"/>
+        <conv:FileExistsConverter x:Key="FileExistsConverter"/>
+        <conv:VersionWwwPathConverter x:Key="VersionWwwPathConverter"/>
+    </UserControl.Resources>
+    <UserControl.DataContext>
+        <vm:TranslationPluginViewModel/>
+    </UserControl.DataContext>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="4*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock Grid.ColumnSpan="2" LineHeight="25" TextWrapping="WrapWithOverflow">
+            <Bold>翻译文件：</Bold> <Run Text="{Binding TranslateJsonPath, Converter={StaticResource FileNameConverter}}"/>
+            <LineBreak/>
+            会修改游戏的 <Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>js/plugins.js 文件，添加我的翻译插件到插件列表中
+            <LineBreak/>
+            - 并会复制翻译的JSON文件到 <Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>translations.json
+            <LineBreak/>
+            - 插件位置：<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>js/plugins/JtJsonTranslationManager.js <Run Text="{Binding TranslationPluginPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>
+            <LineBreak/>
+            <Bold>插件的工作原理：</Bold>
+            <LineBreak/>
+            - 对于常用的游戏内容（物品、技能、状态、敌人、共通事件等），插件会直接替换为翻译后的内容（这样子可以保证使用作弊工具时，显示的内容也是翻译后的）
+            <LineBreak/>
+            - 由于进入地图会重新加载地图事件，所以对于地图事件的翻译，插件会在进入地图时，动态替换为翻译后的内容
+        </TextBlock>
+
+        <Button Grid.Row="1" FontSize="20" Content="添加插件" Command="{Binding AddTranslationPluginCommand}" Margin="0,5,0,0"/>
+        <Button Grid.Row="1" Grid.Column="1" FontSize="20" Content="回退" Command="{Binding RestoreCommand}" Margin="5,5,0,0"/>
+    </Grid>
+</UserControl>

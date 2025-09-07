@@ -17,15 +17,19 @@ namespace RPGMakerUtils.ViewModels
     {
         public IAsyncRelayCommand AddCheatCommand { get; }
 
+        public IAsyncRelayCommand RestoreCommand { get; }
+
         public AddCheatViewModel()
         {
-            AddCheatCommand = new AsyncRelayCommand(AddCheat, CanAddCheat);
+            AddCheatCommand = new AsyncRelayCommand(AddCheatAsync, CanAddCheat);
+            RestoreCommand = new AsyncRelayCommand(RestoreAsync, CanRestore);
 
             WeakReferenceMessenger.Default.Register<GameInfoUpdatedMessage>(this, (r, m) =>
             {
                 GamePath = m.Value.GamePath;
                 GameVersion = m.Value.GameVersion;
                 AddCheatCommand.NotifyCanExecuteChanged();
+                RestoreCommand.NotifyCanExecuteChanged();
                 OnPropertyChanged(nameof(GameJsPath));
                 OnPropertyChanged(nameof(GameMainJsPath));
                 OnPropertyChanged(nameof(GameMainJsBackupPath));
@@ -34,15 +38,18 @@ namespace RPGMakerUtils.ViewModels
             {
                 IsRunning = m.Value;
                 AddCheatCommand.NotifyCanExecuteChanged();
+                RestoreCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(GameMainJsBackupPath));
             });
 
         }
 
-        private async Task AddCheat()
+        private async Task AddCheatAsync()
         {
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
 
-            await Task.Run(async () => {
+            await Task.Run(async () =>
+            {
                 await Utils.CreateZipFromFileAsync(GameMainJsPath, GameMainJsBackupPath);
                 switch (GameVersion)
                 {
@@ -67,28 +74,10 @@ namespace RPGMakerUtils.ViewModels
         }
 
 
-        public bool CanAddCheat() =>
+        private bool CanAddCheat() =>
             Directory.Exists(GameJsPath) &&
                 !File.Exists(GameMainJsBackupPath) &&
                     !IsRunning;
-
-        public string GameJsPath
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(GamePath))
-                    return string.Empty;
-                switch (GameVersion)
-                {
-                    case RPGMakerVersion.MV:
-                        return Path.Combine(GamePath, "www", "js");
-                    case RPGMakerVersion.MZ:
-                        return Path.Combine(GamePath, "js");
-                    default:
-                        return string.Empty;
-                }
-            }
-        }
 
         public string GameMainJsPath
         {
@@ -124,5 +113,45 @@ namespace RPGMakerUtils.ViewModels
             }
         }
 
+        private async Task RestoreAsync()
+        {
+            if (!File.Exists(GameMainJsBackupPath))
+            {
+                MessageBox.Show("没有找到备份文件，无法恢复", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
+            await Task.Run(async () =>
+            {
+                try
+                {
+                    await Utils.ExtractZipAsync(GameMainJsBackupPath, Path.GetDirectoryName(GameMainJsPath), true);
+
+                    // Also Remove cheat cheat-settings folder and cheat-version-description.json
+                    string versionJsonPath = Path.Combine(GameWwwPath, "cheat-version-description.json");
+                    string cheatFolderPath = Path.Combine(GameWwwPath, "cheat");
+                    string cheatSettingsFolderPath = Path.Combine(GameWwwPath, "cheat-settings");
+
+                    if (File.Exists(versionJsonPath))
+                        File.Delete(versionJsonPath);
+                    if (Directory.Exists(cheatFolderPath))
+                        Directory.Delete(cheatFolderPath, true);
+                    if (Directory.Exists(cheatSettingsFolderPath))
+                        Directory.Delete(cheatSettingsFolderPath, true);
+                    File.Delete(GameMainJsBackupPath);
+
+                    MessageBox.Show("恢复成功", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("恢复失败：" + ex.Message, "失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            });
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
+        }
+
+        private bool CanRestore() =>
+            File.Exists(GameMainJsBackupPath) &&
+                !IsRunning;
     }
 }

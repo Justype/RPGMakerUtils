@@ -12,7 +12,7 @@
         Title="RPG Maker MV MZ 辅助软件"
         DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop"
         AllowDrop="True"
-        MinHeight="450" MinWidth="600" Height="450" Width="600">
+        MinHeight="450" MinWidth="600" Height="450" Width="650">
     <Window.Resources>
         <conv:RPGMakerVersionConverter x:Key="RPGMakerVersionConverter"/>
     </Window.Resources>
@@ -34,6 +34,10 @@
         <TabControl Grid.Row="1">
             <TabItem Header="导入">
                 <v:ImportUserControl/>
+            </TabItem>
+
+            <TabItem Header="翻译插件">
+                <v:TranslationPluginUserControl/>
             </TabItem>
 
             <TabItem Header="翻译">

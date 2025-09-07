@@ -10,7 +10,7 @@
              mc:Ignorable="d" d:Background="White" d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <conv:FileNameConverter x:Key="FileNameConverter"/>
-        <conv:VersionDataPathConverter x:Key="VersionDataPathConverter"/>
+        <conv:VersionWwwPathConverter x:Key="VersionWwwPathConverter"/>
         <conv:FileExistsConverter x:Key="FileExistsConverter"/>
     </UserControl.Resources>
     <UserControl.DataContext>
@@ -18,24 +18,26 @@
     </UserControl.DataContext>
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="4*"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="0.5*"/>
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock>
-            原文件会备份到 游戏文件夹/<Run Text="{Binding GameVersion, Converter={StaticResource VersionDataPathConverter}}"/>.zip
+            原文件会备份到 游戏文件夹/<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>data.zip
             <Run Text="{Binding GameDataBackupZipPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>
             <LineBreak/>
             <Bold>翻译文件：</Bold>
             <Run Text="{Binding TranslateJsonPath, Converter={StaticResource FileNameConverter}}"/>
         </TextBlock>
 
-        <Button Grid.Column="1" Content="翻译所有文件" Command="{Binding TranslateCommand}"/>
+        <Button Grid.Column="1" Content="翻译所有文件" Command="{Binding TranslateCommand}" Margin="0,0,5,0"/>
+        <Button Grid.Column="2" Content="回退" Command="{Binding RestoreCommand}"/>
 
-        <ListView Grid.Row="2" Grid.ColumnSpan="2" 
+        <ListView Grid.Row="2" Grid.ColumnSpan="3" 
                   ItemsSource="{Binding GameDataFiles}"
                   Margin="0,5,0,0">
             <ListView.View>

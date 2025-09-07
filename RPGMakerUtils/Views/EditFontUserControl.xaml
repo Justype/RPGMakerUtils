@@ -12,7 +12,6 @@
         <vm:EditFontViewModel/>
     </UserControl.DataContext>
     <UserControl.Resources>
-        <conv:VersionJsPathConverter x:Key="VersionJsPathConverter"/>
         <conv:FileExistsConverter x:Key="FileExistsConverter"/>
     </UserControl.Resources>
 
@@ -26,6 +25,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <TextBlock TextAlignment="Right">
@@ -33,9 +33,9 @@
             C:\Windows\Fonts\
         </TextBlock>
         
-        <TextBox VerticalAlignment="Center" Grid.Column="1" Text="{Binding Font}"/>
+        <TextBox VerticalAlignment="Center" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Font}"/>
 
-        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" LineHeight="25" TextWrapping="WrapWithOverflow">
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="3" LineHeight="25" TextWrapping="WrapWithOverflow">
             目前只支持 MV 版本的游戏
             <LineBreak/>
             会拷贝系统字体到 游戏目录<Bold>/www/Fonts/</Bold> 目录下，并修改CSS
@@ -53,5 +53,6 @@
 
         <Button Grid.Row="2"  Grid.ColumnSpan="2" FontSize="20" 
                 Content="改字体" Command="{Binding EditFontCommand}" Margin="0,5,0,0"/>
+        <Button Grid.Row="2"  Grid.Column="2" FontSize="20"  Content="回退" Command="{Binding RestoreCommand}" Margin="5,5,0,0"/>
     </Grid>
 </UserControl>

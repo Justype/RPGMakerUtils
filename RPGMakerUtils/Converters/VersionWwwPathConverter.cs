@@ -9,7 +9,7 @@ using System.Windows.Data;
 
 namespace RPGMakerUtils.Converters
 {
-    internal class VersionJsPathConverter : IValueConverter
+    internal class VersionWwwPathConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
@@ -18,9 +18,9 @@ namespace RPGMakerUtils.Converters
                 switch (version)
                 {
                     case RPGMakerVersion.MV:
-                        return "www/js";
+                        return "www/";
                     case RPGMakerVersion.MZ:
-                        return "js";
+                        return "";
                     default:
                         break;
                 }

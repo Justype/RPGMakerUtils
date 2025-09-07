@@ -28,14 +28,19 @@ namespace RPGMakerUtils.ViewModels
 
         public IAsyncRelayCommand TranslateCommand { get; }
 
+        public IAsyncRelayCommand RestoreCommand { get; }
+
         public TranslateViewModel()
         {
-            TranslateCommand = new AsyncRelayCommand(TranslateAll, CanTranslate);
+            TranslateCommand = new AsyncRelayCommand(TranslateAllAsync, CanTranslate);
+            RestoreCommand = new AsyncRelayCommand(RestoreAsync, CanRestore);
 
             WeakReferenceMessenger.Default.Register<ProgramRunningMessage>(this, (r, m) =>
             {
                 IsRunning = m.Value;
                 TranslateCommand.NotifyCanExecuteChanged();
+                RestoreCommand.NotifyCanExecuteChanged();
+                OnPropertyChanged(nameof(GameDataBackupZipPath));
             });
             WeakReferenceMessenger.Default.Register<GameInfoUpdatedMessage>(this, (r, m) =>
             {
@@ -46,19 +51,15 @@ namespace RPGMakerUtils.ViewModels
                 OnPropertyChanged(nameof(GameDataBackupZipPath));
                 UpdateGameDataFiles();
                 TranslateCommand.NotifyCanExecuteChanged();
+                RestoreCommand.NotifyCanExecuteChanged();
             });
-            WeakReferenceMessenger.Default.Register<TranslateJsonUpdatedMessage>(this, (r, m) => {
+            WeakReferenceMessenger.Default.Register<TranslateJsonUpdatedMessage>(this, (r, m) =>
+            {
                 TranslateJsonPath = m.Value;
                 TranslateCommand.NotifyCanExecuteChanged();
+                RestoreCommand.NotifyCanExecuteChanged();
             });
         }
-
-
-        public bool CanTranslate() => 
-            GameDataFiles.Count() != 0 && 
-                File.Exists(TranslateJsonPath) &&
-                    !File.Exists(GameDataBackupZipPath) &&
-                        !IsRunning;
 
         public string GamePluginsJsPath
         {
@@ -70,7 +71,7 @@ namespace RPGMakerUtils.ViewModels
                 {
                     case RPGMakerVersion.MV:
                     case RPGMakerVersion.MZ:
-                        return Path.Combine(GameWwwPath, "js", "plugins.js");
+                        return Path.Combine(GameJsPath, "plugins.js");
                     default:
                         return string.Empty;
                 }
@@ -111,7 +112,7 @@ namespace RPGMakerUtils.ViewModels
             }
         }
 
-        public async Task TranslateAll()
+        public async Task TranslateAllAsync()
         {
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
 
@@ -133,13 +134,53 @@ namespace RPGMakerUtils.ViewModels
                     MessageBox.Show("翻译成功", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 else
                     MessageBox.Show(
-                        isPluginsJsTranslated ? "翻译失败，请检查翻译文件" : "Plugins.js 翻译失败，请检查翻译文件", 
-                        "失败", 
-                        MessageBoxButton.OK, 
+                        isPluginsJsTranslated ? "翻译失败，请检查翻译文件" : "Plugins.js 翻译失败，请检查翻译文件",
+                        "失败",
+                        MessageBoxButton.OK,
                         MessageBoxImage.Error);
             });
 
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
         }
+
+        public bool CanTranslate() =>
+            GameDataFiles.Count() != 0
+         && File.Exists(TranslateJsonPath)
+         && !File.Exists(GameDataBackupZipPath)
+         && File.Exists(GamePluginsJsPath)
+         && !File.ReadAllText(GamePluginsJsPath).Contains("JtJsonTranslationManager") // Prevent double translation
+         && !IsRunning;
+
+        public async Task RestoreAsync()
+        {
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
+            await Task.Run(async () =>
+            {
+                bool isSuccess = true;
+
+                if (File.Exists(GamePluginsJsBackupPath))
+                    isSuccess = isSuccess && await Utils.ExtractZipAsync(GamePluginsJsBackupPath, Path.GetDirectoryName(GamePluginsJsPath), overwrite: true);
+
+                if (File.Exists(GameDataBackupZipPath))
+                    isSuccess = isSuccess && await Utils.ExtractZipAsync(GameDataBackupZipPath, Path.GetDirectoryName(GameDataPath), overwrite: true);
+
+                if (isSuccess)
+                {
+                    File.Delete(GamePluginsJsBackupPath);
+                    File.Delete(GameDataBackupZipPath);
+                    MessageBox.Show("还原成功", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                } else
+                {
+                    MessageBox.Show("还原失败，请手动还原", "失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+
+            });
+
+            WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
+        }
+
+        private bool CanRestore() =>
+            File.Exists(GameDataBackupZipPath) &&
+                !IsRunning;
     }
 }

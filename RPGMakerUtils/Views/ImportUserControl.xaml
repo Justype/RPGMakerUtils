@@ -10,7 +10,7 @@
              mc:Ignorable="d" d:Background="White" d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <conv:FileNameConverter x:Key="FileNameConverter"/>
-        <conv:VersionDataPathConverter x:Key="VersionDataPathConverter"/>
+        <conv:VersionWwwPathConverter x:Key="VersionWwwPathConverter"/>
     </UserControl.Resources>
     <UserControl.DataContext>
         <vm:ImportViewModel/>
@@ -57,7 +57,7 @@
             </Grid>
         </Button>
         <TextBlock Grid.Row="1" Grid.ColumnSpan="2">
-            所有的系统和地图文件在 游戏/<Run Text="{Binding GameVersion, Converter={StaticResource VersionDataPathConverter}}"/> 目录下
+            所有的系统和地图文件在 游戏/<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>data 目录下
         </TextBlock>
     </Grid>
 </UserControl>

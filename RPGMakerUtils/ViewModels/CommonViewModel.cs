@@ -46,6 +46,24 @@ namespace RPGMakerUtils.ViewModels
             }
         }
 
+        public string GameJsPath
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(GamePath))
+                    return string.Empty;
+                switch (GameVersion)
+                {
+                    case RPGMakerVersion.MV:
+                        return Path.Combine(GamePath, "www", "js");
+                    case RPGMakerVersion.MZ:
+                        return Path.Combine(GamePath, "js");
+                    default:
+                        return string.Empty;
+                }
+            }
+        }
+
         public string GameWwwPath
         {
             get
