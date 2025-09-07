@@ -2,7 +2,7 @@
 
 本版本使用 .NET Framework 4.8 编写，支持 RPG Maker MV 和 RPG Maker MZ 的游戏。
 
-[B站视频](https://www.bilibili.com/video/BV1hSJizWEkz/)： 使用方法与一些代码逻辑
+[B站视频](https://www.bilibili.com/video/BV1hSJizWEkz/)/[YouTube](https://www.youtube.com/watch?v=W_4BV8pr-iw)： 使用方法与一些代码逻辑
 
 ## 功能
 
