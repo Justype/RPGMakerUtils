@@ -9,7 +9,7 @@
         xmlns:v="clr-namespace:RPGMakerUtils.Views"
         mc:Ignorable="d"
         FontSize="15" FontFamily="Microsoft YaHei"
-        Title="RPG Maker MV MZ 辅助软件 v2.1.0"
+        Title="RPG Maker MV MZ 辅助软件 v2.1.1"
         DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop"
         AllowDrop="True"
         MinHeight="450" MinWidth="600" Height="450" Width="650">
@@ -40,15 +40,15 @@
                 <v:TranslationPluginUserControl/>
             </TabItem>
 
-            <TabItem Header="翻译">
+            <TabItem Header="替换翻译">
                 <v:TranslateUserControl/>
             </TabItem>
 
-            <TabItem Header="修改字体">
+            <TabItem Header="字体">
                 <v:EditFontUserControl/>
             </TabItem>
 
-            <TabItem Header="添加作弊">
+            <TabItem Header="作弊">
                 <v:AddCheatUserControl/>
             </TabItem>
 
@@ -69,7 +69,7 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="TabItem">
-                                <Border Name="Border" Background="LightGray" Padding="10,3" CornerRadius="3" Margin="1,0">
+                                <Border Name="Border" Background="LightGray" Padding="10,3" CornerRadius="3" Margin="2,0">
                                     <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>

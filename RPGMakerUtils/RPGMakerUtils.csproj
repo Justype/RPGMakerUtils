@@ -30,8 +30,8 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>1</ApplicationRevision>
-    <ApplicationVersion>1.1.1.%2a</ApplicationVersion>
+    <ApplicationRevision>2</ApplicationRevision>
+    <ApplicationVersion>2.1.1.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
@@ -290,7 +290,6 @@
     <EmbeddedResource Include="Resources\rpg_mz_cheat.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <None Include="RPGMakerUtils_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
