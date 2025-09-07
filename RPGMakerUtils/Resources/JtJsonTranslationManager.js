@@ -1,5 +1,4 @@
 /*:
-
  * @plugindesc A plugin to translate RPG Maker game text using a JSON dictionary. Supports synchronous and Promise-based translation APIs.
  * @author Justype
  *
@@ -16,8 +15,8 @@
  * 1. Place 'translations.json' in your project's 'www' folder. The file should map original text to translated text.
  *    Example:
  *    {
- *      "Hello": "ÄãºÃ",
- *      "Save": "±£´æ"
+ *      "Hello, world!": "Bonjour, le monde!",
+ *      "This is a test.": "Ceci est un test."
  *    }
  * 2. Add this plugin to your project and place it below any plugins that add new menu commands or text.
  * 3. Use TranslationManager in your scripts:
@@ -39,113 +38,107 @@
  *
  * Place this plugin below any plugins that add new menu commands or text.
  *
-* @param translationPath
-* @text Translation JSON Path
-* @desc Path to the translations.json file (relative to www folder). Example: data/translations.json
-* @default translations.json
+ * @param translationPath
+ * @text Translation JSON Path
+ * @desc Path to the translations.json file (relative to www folder). Example: 'data/translations.json'
+ * @default translations.json
  */
 
-(function() {
-    'use strict';
-    
-    let translationDictionary = null;
-    let translationKeysSorted = null;
-
-    // --- Core Logic: Load the Translation Dictionary ---
-    // This function is aliased to load our custom data before the game starts.
-    const _DataManager_loadDatabase = DataManager.loadDatabase;
-    DataManager.loadDatabase = function() {
-        _DataManager_loadDatabase.call(this);
-        // Get plugin parameters
-        var parameters = PluginManager.parameters('JtJsonTranslationManager');
-        var translationPath = parameters['translationPath'] || 'translations.json';
-        const xhr = new XMLHttpRequest();
-        const url = translationPath;
-        xhr.open('GET', url, false);
-        xhr.overrideMimeType('application/json');
-        xhr.onload = function() {
-            if (xhr.status < 400) {
-                translationDictionary = JSON.parse(xhr.responseText);
-                translationDictionary[""] = ""; // Ensure empty string maps to itself
-                Object.keys(translationDictionary).forEach(key => {
-                    const value = translationDictionary[key];
-                    translationDictionary[value] = value; // Ensure translated text maps to itself
-                });
-                translationKeysSorted = Object.keys(translationDictionary).sort((a, b) => b.length - a.length);
-            }
-        };
-        xhr.onerror = function() {
-            throw new Error('Failed to load ' + url);
-        };
-        xhr.send();
-    };
-
-    // Patch DataManager.onLoad to run translation after all database files are loaded
-    const _DataManager_onLoad = DataManager.onLoad;
-    DataManager._translationApplied = false;
-    DataManager.onLoad = function(object) {
-        _DataManager_onLoad.call(this, object);
-        if (DataManager.isDatabaseLoaded() && !DataManager._translationApplied && translationDictionary) {
-            DataManager_translateCommonData();
-            DataManager._translationApplied = true;
-        }
-    };
-
-    const _DataManager_loadMapData = DataManager.loadMapData;
-    DataManager.loadMapData = function(mapId) {
-        _DataManager_loadMapData.call(this, mapId);
-        const _onLoad = DataManager.onLoad;
-        DataManager.onLoad = function(object) {
-            _onLoad.call(this, object);
-            if (object === $dataMap && translationDictionary) {
-                DataManager_translateMapData();
-            }
-        };
-    };
-
-    // Static TranslationManager class
-    class TranslationManager {
-        static translate(text) {
-            if (text === null || text === undefined || typeof text !== 'string') {
-                return text;
-            }
-            if (translationDictionary && translationDictionary[text]) {
-                return translationDictionary[text];
-            }
-            // If not in the dictionary, try to find partial matches
-            let translatedText = text;
-            if (translationDictionary && translationKeysSorted) {
-                translationKeysSorted.forEach(key => {
-                    translatedText = translatedText.replace(key, translationDictionary[key]);
-                });
-                // Cache the result for future lookups
-                translationDictionary[text] = translatedText;
-                translationKeysSorted = Object.keys(translationDictionary).sort((a, b) => b.length - a.length);
-            }
-            return translatedText;
-        }
-
-        // Async-style callback, but runs synchronously
-        static translateIfNeed(text, callback) {
-            const result = TranslationManager.translate(text);
-            if (typeof callback === 'function') {
-                callback(result);
-            }
-            return result;
-        }
-
-        // Returns a Promise that resolves with the translated text
-        static getTranslatePromise(text) {
-            return new Promise((resolve) => {
-                const result = TranslationManager.translate(text);
-                resolve(result);
-            });
-        }
+(function () {
+    //#region TranslationManager
+    function TranslationManager() {
+        throw new Error('This is a static class');
     }
 
-    window.TranslationManager = TranslationManager;
+    TranslationManager._dict = null;
+    TranslationManager._keysSorted = null;
+    TranslationManager._dictPath = null;
+    TranslationManager._isDictChanged = false;
 
-    function translateEventCommandText(command) {
+    TranslationManager.isInitialized = function () {
+        return this._dict !== null;
+    };
+
+    TranslationManager.initialize = function (dictionary) {
+        this._dict = dictionary;
+        this._dict[""] = ""; // Ensure empty string maps to itself
+        Object.keys(this._dict).forEach(key => {
+            const value = this._dict[key];
+            this._dict[value] = value; // Ensure translated text maps to itself
+        });
+        this._keysSorted = Object.keys(dictionary).sort((a, b) => b.length - a.length);
+    };
+
+    TranslationManager.translate = function (text, noCache = false) {
+        if (text === null || text === undefined || typeof text !== 'string') {
+            return text;
+        }
+        if (this._dict && this._dict[text]) {
+            return this._dict[text];
+        }
+        // If not in the dictionary, try to find partial matches
+        let translatedText = text;
+        if (this._dict && this._keysSorted) {
+            this._keysSorted.forEach(key => {
+                translatedText = translatedText.replace(key, this._dict[key]);
+            });
+            if (!noCache && translatedText !== text) {
+                // Cache the result for future lookups
+                this._dict[text] = translatedText;
+                this._dict[translatedText] = translatedText; // Ensure translated text maps to itself
+                this._keysSorted = Object.keys(this._dict).sort((a, b) => b.length - a.length);
+                this._isDictChanged = true;
+            }
+        }
+        return translatedText;
+    };
+
+    // Async-style callback, but runs synchronously
+    TranslationManager.translateIfNeed = function (text, callback) {
+        const result = TranslationManager.translate(text);
+        if (typeof callback === 'function') {
+            callback(result);
+        }
+        return result;
+    };
+
+    // Returns a Promise that resolves with the translated text
+    TranslationManager.getTranslatePromise = function (text) {
+        return new Promise((resolve) => {
+            const result = TranslationManager.translate(text);
+            resolve(result);
+        });
+    };
+
+    TranslationManager.saveDictionary = function () {
+        // Use Electron's fs module to save the updated dictionary
+        if (!this._isDictChanged || !this._dictPath) return;
+        this._isDictChanged = false; // Reset the flag
+        if (typeof require !== 'function') return; // Not in an environment that supports require
+        const fs = require('fs');
+        if (!fs) return;
+
+        var dictPath = this._dictPath;
+        if (Utils.RPGMAKER_NAME === "MV") {
+            dictPath = 'www/' + dictPath;
+        }
+        const backupDictPath = dictPath.replace(/(\.json)?$/, '_backup.json');
+        var jsonString = JSON.stringify(this._dict, null, 2);
+        try {
+            fs.writeFileSync(backupDictPath, jsonString, 'utf8');
+            if (fs.existsSync(dictPath)) {
+                fs.unlinkSync(dictPath);
+            }
+            fs.renameSync(backupDictPath, dictPath);
+        } catch (err) {
+            console.error("Error saving file:", err);
+            if (fs.existsSync(backupDictPath)) {
+                fs.unlinkSync(backupDictPath);
+            }
+        }
+    };
+
+    TranslationManager.translateEventCommandText = function (command) {
         switch (command.code) {
             case 101: // first parameter is the text (character name?)
                 command.parameters[0] = TranslationManager.translate(command.parameters[0]);
@@ -163,9 +156,9 @@
                 command.parameters[0] = TranslationManager.translate(command.parameters[0]);
                 break;
         }
-    }
+    };
 
-    function translateEventCommandTextOld(command) {
+    TranslationManager.translateEventCommandTextOld = function (command) {
         if ([101, 401, 102, 402, 405].includes(command.code) && Array.isArray(command.parameters)) {
             command.parameters = command.parameters.map(param => {
                 if (typeof param === 'string') {
@@ -176,7 +169,73 @@
                 return param;
             });
         }
-    }
+    };
+    //#endregion
+
+    //#region Plugin
+    function patchPlugin() {
+        // TextResource (RPG Maker MZ)
+        if (typeof TextResource !== 'undefined' && TextResource.getText) {
+            const _TextResource_getText = TextResource.getText;
+            TextResource.getText = function (label) {
+                const text = _TextResource_getText.call(this, label);
+                return TranslationManager.translate(text);
+            };
+        }
+    };
+    //#endregion
+
+    //#region Initialization
+    // --- Core Logic: Load the Translation Dictionary ---
+    // This function is aliased to load our custom data before the game starts.
+    const _DataManager_loadDatabase = DataManager.loadDatabase;
+    DataManager.loadDatabase = function () {
+        _DataManager_loadDatabase.call(this);
+        // Get plugin parameters
+        var parameters = PluginManager.parameters('JtJsonTranslationManager');
+        var translationPath = parameters['translationPath'] || 'translations.json';
+        TranslationManager._dictPath = translationPath;
+        const xhr = new XMLHttpRequest();
+        const url = translationPath;
+        xhr.open('GET', url, false);
+        xhr.overrideMimeType('application/json');
+        xhr.onload = function () {
+            if (xhr.status < 400) {
+                TranslationManager.initialize(JSON.parse(xhr.responseText));
+            }
+        };
+        xhr.onerror = function () {
+            throw new Error('Failed to load ' + url);
+        };
+        xhr.send();
+    };
+
+    // Patch DataManager.onLoad to run translation after all database files are loaded
+    const _DataManager_onLoad = DataManager.onLoad;
+    DataManager._translationApplied = false;
+    DataManager.onLoad = function (object) {
+        _DataManager_onLoad.call(this, object);
+        if (DataManager.isDatabaseLoaded() && !DataManager._translationApplied && TranslationManager.isInitialized()) {
+            DataManager_translateCommonData();
+            patchPlugin();
+            DataManager._translationApplied = true;
+        }
+    };
+
+    const _DataManager_loadMapData = DataManager.loadMapData;
+    DataManager.loadMapData = function (mapId) {
+        _DataManager_loadMapData.call(this, mapId);
+        const _onLoad = DataManager.onLoad;
+        DataManager.onLoad = function (object) {
+            _onLoad.call(this, object);
+            if (object === $dataMap && TranslationManager.isInitialized()) {
+                DataManager_translateMapData();
+            }
+            TranslationManager.saveDictionary();
+        };
+    };
+
+    window.TranslationManager = TranslationManager;
 
     function DataManager_translateCommonData() {
         // Translate map names in $dataMapInfos
@@ -214,27 +273,34 @@
             });
         }
 
-        // Translate the System terms and messages
-        if ($dataSystem && $dataSystem.terms) {
-            if ($dataSystem.terms.basic) {
-                $dataSystem.terms.basic.forEach((term, i) => {
-                    $dataSystem.terms.basic[i] = TranslationManager.translate(term);
-                });
-            }
-            if ($dataSystem.terms.commands) {
-                $dataSystem.terms.commands.forEach((term, i) => {
-                    $dataSystem.terms.commands[i] = TranslationManager.translate(term);
-                });
-            }
-            if ($dataSystem.terms.params) {
-                $dataSystem.terms.params.forEach((term, i) => {
-                    $dataSystem.terms.params[i] = TranslationManager.translate(term);
-                });
-            }
-            if ($dataSystem.terms.messages) {
-                for (let key in $dataSystem.terms.messages) {
-                    $dataSystem.terms.messages[key] = TranslationManager.translate($dataSystem.terms.messages[key]);
+        if ($dataSystem) {
+            // Translate the System terms and messages
+            if ($dataSystem.terms) {
+                if ($dataSystem.terms.basic) {
+                    $dataSystem.terms.basic.forEach((term, i) => {
+                        $dataSystem.terms.basic[i] = TranslationManager.translate(term);
+                    });
                 }
+                if ($dataSystem.terms.commands) {
+                    $dataSystem.terms.commands.forEach((term, i) => {
+                        $dataSystem.terms.commands[i] = TranslationManager.translate(term);
+                    });
+                }
+                if ($dataSystem.terms.params) {
+                    $dataSystem.terms.params.forEach((term, i) => {
+                        $dataSystem.terms.params[i] = TranslationManager.translate(term);
+                    });
+                }
+                if ($dataSystem.terms.messages) {
+                    for (let key in $dataSystem.terms.messages) {
+                        $dataSystem.terms.messages[key] = TranslationManager.translate($dataSystem.terms.messages[key]);
+                    }
+                }
+            }
+
+            // Translate game title
+            if ($dataSystem.gameTitle) {
+                $dataSystem.gameTitle = TranslationManager.translate($dataSystem.gameTitle);
             }
         }
 
@@ -243,7 +309,7 @@
         // if ($dataCommonEvents) {
         //     $dataCommonEvents.forEach(event => {
         //         if (event && event.list) {
-        //             event.list.forEach(translateEventCommandText);
+        //             event.list.forEach(TranslationManager.translateEventCommandText);
         //         }
         //     });
         // }
@@ -263,7 +329,7 @@
             //         if (event && event.pages) {
             //             event.pages.forEach(page => {
             //                 if (page.list) {
-            //                     page.list.forEach(translateEventCommandText);
+            //                     page.list.forEach(TranslationManager.translateEventCommandText);
             //                 }
             //             });
             //         }
@@ -271,143 +337,56 @@
             // }
         }
     }
-    
-    // --- Text Display Translation Patches ---
-    // Translate all command names in all command windows
+    //#endregion
+
+    //#region Patches
+    // Choices and other command window text
     const _Window_Command_addCommand = Window_Command.prototype.addCommand;
-    Window_Command.prototype.addCommand = function(name, symbol, enabled = true, ext = null) {
-    _Window_Command_addCommand.call(this, TranslationManager.translate(name), symbol, enabled, ext);
+    Window_Command.prototype.addCommand = function (name, symbol, enabled = true, ext = null) {
+        _Window_Command_addCommand.call(this, TranslationManager.translate(name), symbol, enabled, ext);
     };
 
-    // Translate window texts (like 'Options' or 'Save')
-    const _Window_Base_drawText = Window_Base.prototype.drawText;
-    Window_Base.prototype.drawText = function(text, x, y, maxWidth, align) {
-    text = TranslationManager.translate(text);
-        _Window_Base_drawText.call(this, text, x, y, maxWidth, align);
-    };
-
-    // Patch Game_Message.setSpeakerName to translate speaker names in event messages
-    const _Game_Message_setSpeakerName = Game_Message.prototype.setSpeakerName;
-    Game_Message.prototype.setSpeakerName = function(name) {
-    _Game_Message_setSpeakerName.call(this, TranslationManager.translate(name));
-    };
-
-    // Translate the main message window text
+    // Message window text
     const _Window_Message_startMessage = Window_Message.prototype.startMessage;
-    Window_Message.prototype.startMessage = function() {
-        // This is a simple but effective way to translate messages
-        // that are set directly in events.
+    Window_Message.prototype.startMessage = function () {
         for (let i = 0; i < $gameMessage._texts.length; i++) {
             $gameMessage._texts[i] = TranslationManager.translate($gameMessage._texts[i]);
         }
         _Window_Message_startMessage.call(this);
     };
 
-    // Translate item/skill names and descriptions
-    const _Scene_ItemBase_drawItemName = Scene_ItemBase.prototype.drawItemName;
-    Scene_ItemBase.prototype.drawItemName = function(item, x, y, width) {
-        if (item) {
-            const originalName = item.name;
-            item.name = TranslationManager.translate(item.name);
-            _Scene_ItemBase_drawItemName.call(this, item, x, y, width);
-            item.name = originalName; // Revert the name to prevent permanent changes
-        }
-    };
-
-    // Patch for the battle log to show translated messages.
+    // Battle log text ??
     const _Window_BattleLog_addText = Window_BattleLog.prototype.addText;
-    Window_BattleLog.prototype.addText = function(text) {
-    _Window_BattleLog_addText.call(this, TranslationManager.translate(text));
+    Window_BattleLog.prototype.addText = function (text) {
+        _Window_BattleLog_addText.call(this, TranslationManager.translate(text));
     };
 
-    // Translate item descriptions in the help window
-    const _Window_Help_setItem = Window_Help.prototype.setItem;
-    Window_Help.prototype.setItem = function(item) {
-        if (item) {
-            const originalDescription = item.description;
-            item.description = TranslationManager.translate(item.description);
-            _Window_Help_setItem.call(this, item);
-            item.description = originalDescription; // Revert the description
-        } else {
-            _Window_Help_setItem.call(this, item);
-        }
+    // // Extremely performance-heavy patch, disabled
+    // // const Bitmap_drawText = Bitmap.prototype.drawText;
+    // Bitmap.prototype.drawText = function(text, x, y, maxWidth, lineHeight, align) {
+    //     if (text) {
+    //         return Bitmap_drawText.call(this, TranslationManager.translate(text), x, y, maxWidth, lineHeight, align);
+    //     } else {
+    //         return Bitmap_drawText.call(this, text, x, y, maxWidth, lineHeight, align);
+    //     }
+    // };
+
+    // // Alias the function that draws text in most windows
+    // // This provides broad coverage for things like item descriptions, skill names, etc.
+    // // drawTextEx will call convertEscapeCharacters, so we only need to patch one of them.
+    // const _Window_Base_drawTextEx = Window_Base.prototype.drawTextEx;
+    // Window_Base.prototype.drawTextEx = function(text, x, y) {
+    //     if (text) {
+    //         return _Window_Base_drawTextEx.call(this, TranslationManager.translate(text), x, y);
+    //     } else {
+    //         return _Window_Base_drawTextEx.call(this, text, x, y);
+    //     }
+    // };
+
+    const _Window_Base_convertEscapeCharacters = Window_Base.prototype.convertEscapeCharacters;
+    Window_Base.prototype.convertEscapeCharacters = function (text) {
+        text = _Window_Base_convertEscapeCharacters.call(this, text);
+        return TranslationManager.translate(text, noCache = true);
     };
-
-    // // --- Plugin Command Argument Translation ---
-    // var PLUGIN_WHITE_DICT = {
-    //     "D_TEXT": null,
-    //     "DTextPicture": ["text"],
-    // };
-    // // Override plugin command handling to translate arguments
-    // regexNonEnglishNumbersSpace = /^[a-zA-Z0-9 _-]+$/;
-
-    // // Use different methods for MV and MZ
-    // switch (Utils.RPGMAKER_NAME) {
-    //     case "MV":
-    //         Game_Interpreter.prototype.command356 = function() {
-    //             var args = this._params[0].split(" ");
-    //             const command = args.shift();
-    //             if (Object.keys(PLUGIN_WHITE_DICT).includes(command)) {
-    //                 // Translate arguments that contain non-English characters
-    //                 for (let i = 1; i < args.length; i++) {
-    //                     if (!args[i].match(regexNonEnglishNumbersSpace)) {
-    //                         args[i] = TranslationManager.translate(args[i]);
-    //                     }
-    //                 }
-    //             }
-    //             this.pluginCommand(command, args);
-    //             return true;
-    //         };
-    //         break;
-    //     case "MZ":
-    //         Game_Interpreter.prototype.command356 = function(params) {
-    //             var args = params[0].split(" ");
-    //             const command = args.shift();
-
-    //             if (Object.keys(PLUGIN_WHITE_DICT).includes(command)) {
-    //                 // Translate arguments that contain non-English characters
-    //                 for (let i = 1; i < args.length; i++) {
-    //                     if (!args[i].match(regexNonEnglishNumbersSpace)) {
-    //                         args[i] = TranslationManager.translate(args[i]);
-    //                     }
-    //                 }
-    //             }
-    //             this.pluginCommand(command, args);
-    //             return true;
-    //         };
-    //         break;
-    // }
-
-    // function recursiveTranslate(obj, safeKeys = null, isSafe = false) {
-    //     if (typeof obj === 'string') {
-    //         if (isSafe)
-    //             return getTranslation(obj);
-    //         return obj;
-    //     } else if (Array.isArray(obj)) {
-    //         return obj.map(item => recursiveTranslate(item));
-    //     } else if (typeof obj === 'object' && obj !== null) {
-    //         for (let key in obj) {
-    //             if (safeKeys) {
-    //                 isSafe = safeKeys.includes(key);
-    //                 recursiveTranslate(obj[key], safeKeys, isSafe);
-    //             } else {
-    //                 obj[key] = recursiveTranslate(obj[key]);
-    //             }
-    //         }
-    //         return obj;
-    //     }
-    //     return obj;
-    // }
-
-    // // 357 are only in MZ
-    // Game_Interpreter.prototype.command357 = function(params) {
-    //     const pluginName = Utils.extractFileName(params[0]);
-    //     // If the plugin is in the whitelist, translate its arguments
-    //     if (PLUGIN_WHITE_DICT[pluginName]) {
-    //         args = recursiveTranslate(params[3], safeKeys = PLUGIN_WHITE_DICT[pluginName]);
-    //     }
-    //     PluginManager.callCommand(this, pluginName, params[1], args);
-    //     return true;
-    // };
-
+    //#endregion
 })();
