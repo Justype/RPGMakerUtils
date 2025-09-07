@@ -51,7 +51,9 @@
     }
 
     TranslationManager._dict = null;
-    TranslationManager._keysSorted = null;
+    TranslationManager._translatedSet = new Set();
+    TranslationManager._lengthKeyDict = null;
+
     TranslationManager._dictPath = null;
     TranslationManager._isDictChanged = false;
 
@@ -61,37 +63,70 @@
 
     TranslationManager.initialize = function (dictionary) {
         this._dict = dictionary;
+        this._translatedSet = new Set(Object.values(dictionary));
+        this._translatedSet.add(""); // Ensure empty string is included
         this._dict[""] = ""; // Ensure empty string maps to itself
-        Object.keys(this._dict).forEach(key => {
-            const value = this._dict[key];
-            this._dict[value] = value; // Ensure translated text maps to itself
-        });
-        this._keysSorted = Object.keys(dictionary).sort((a, b) => b.length - a.length);
+
+        // Store keys by length for efficient partial matching
+        this._lengthKeyDict = Object.keys(dictionary).reduce((acc, key) => {
+            const length = key.length;
+            if (!acc[length]) {
+                acc[length] = [];
+            }
+            acc[length].push(key);
+            return acc;
+        }, {});
     };
 
-    TranslationManager.translate = function (text, noCache = false) {
-        if (text === null || text === undefined || typeof text !== 'string') {
+    TranslationManager.translate = function (text, detectStartWhitespace = true) {
+        if (typeof text !== 'string' || !this._dict || this._translatedSet.has(text)) {
             return text;
         }
-        if (this._dict && this._dict[text]) {
-            return this._dict[text];
+        if (detectStartWhitespace) {
+            const match = text.match(/^\s+/);
+            leadingSpaces = match ? match[0] : '';
+            text = text.slice(leadingSpaces.length);
+        }
+        if (this._dict[text]) {
+            return detectStartWhitespace ? leadingSpaces + this._dict[text] : this._dict[text];
         }
         // If not in the dictionary, try to find partial matches
         let translatedText = text;
-        if (this._dict && this._keysSorted) {
-            this._keysSorted.forEach(key => {
-                translatedText = translatedText.replace(key, this._dict[key]);
+        if (this._dict && this._lengthKeyDict) {
+            const textLength = text.length;
+            const lenSorted = Object.keys(this._lengthKeyDict)
+                .map(l => parseInt(l, 10))
+                .filter(l => l < textLength)
+                .sort((a, b) => b - a); // Descending order
+
+            // Go through all possible length buckets
+            lenSorted.forEach(len => {
+                this._lengthKeyDict[len].forEach(key => {
+                    translatedText = translatedText.replace(key, this._dict[key]);
+                });
             });
-            if (!noCache && translatedText !== text) {
-                // Cache the result for future lookups
-                this._dict[text] = translatedText;
-                this._dict[translatedText] = translatedText; // Ensure translated text maps to itself
-                this._keysSorted = Object.keys(this._dict).sort((a, b) => b.length - a.length);
-                this._isDictChanged = true;
-            }
+
+            translatedText = detectStartWhitespace ? leadingSpaces + translatedText : translatedText;
         }
         return translatedText;
     };
+
+    TranslationManager.translateWithCache = function (text) {
+        if (typeof text !== 'string' || !this._dict || this._translatedSet.has(text)) {
+            return text;
+        }
+
+        translatedText = TranslationManager.translate(text);
+
+        // Cache the new translation
+        this._dict[text] = translatedText;
+        this._translatedSet.add(translatedText);
+        if (!this._lengthKeyDict[text.length]) {
+            this._lengthKeyDict[text.length] = [];
+        }
+        this._lengthKeyDict[text.length].push(text);
+        this._isDictChanged = true;
+    }
 
     // Async-style callback, but runs synchronously
     TranslationManager.translateIfNeed = function (text, callback) {
@@ -386,7 +421,7 @@
     const _Window_Base_convertEscapeCharacters = Window_Base.prototype.convertEscapeCharacters;
     Window_Base.prototype.convertEscapeCharacters = function (text) {
         text = _Window_Base_convertEscapeCharacters.call(this, text);
-        return TranslationManager.translate(text, noCache = true);
+        return TranslationManager.translate(text);
     };
     //#endregion
 })();

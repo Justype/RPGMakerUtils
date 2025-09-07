@@ -26,7 +26,10 @@ namespace RPGMakerUtils.Resources
         public RPGMakerMVZTranslator(Dictionary<string, string> translations)
         {
             Translations = translations;
-            OrderedTranslationKeys = translations.Keys.OrderByDescending(k => k.Length).ToList();
+
+            LengthKeyDict = translations.Keys.GroupBy(k => k.Length)
+                                             .ToDictionary(g => g.Key, g => g.ToList());
+                                              
         }
 
         /// <summary>
@@ -53,7 +56,7 @@ namespace RPGMakerUtils.Resources
 
         public Dictionary<string, string> Translations { get; private set; } = new Dictionary<string, string>();
 
-        public List<string> OrderedTranslationKeys { get; private set; } = new List<string>();
+        public Dictionary<int, List<string>> LengthKeyDict { get; private set; } = new Dictionary<int, List<string>>();
 
         /// <summary>
         /// If target string is in translations key, directly translate it. If not check all keys (ordered by length).
@@ -67,8 +70,15 @@ namespace RPGMakerUtils.Resources
                 return str;
             if (Translations.ContainsKey(str))
                 return Translations[str];
-            foreach (string key in OrderedTranslationKeys)
-                str = str.Replace(key, Translations[key]);
+
+            var orderedKeyLengths = LengthKeyDict.Keys.Where(len => len < str.Length)
+                                                      .OrderByDescending(len => len);
+
+            foreach (int len in orderedKeyLengths)
+            {
+                foreach (string key in LengthKeyDict[len])
+                    str = str.Replace(key, Translations[key]);
+            }
             return str;
         }
 

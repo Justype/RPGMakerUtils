@@ -176,6 +176,9 @@ namespace RPGMakerUtils.ViewModels
 
             });
 
+            // Recreate the list to refresh the UI
+            UpdateGameDataFiles();
+
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
         }
 
