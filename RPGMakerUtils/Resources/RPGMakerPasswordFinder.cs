@@ -131,10 +131,13 @@ namespace RPGMakerUtils.Resources
                     {
                         foreach (var mapEvent in mapEvents)
                         {
+                            if (string.IsNullOrWhiteSpace(mapEvent.Item1))
+                                continue;
+
                             passwords.Add(new PasswordDialog
                             {
                                 Password = mapEvent.Item1,
-                                LastDialog = $"【{gameDataFile.FileName}】 {GetMapName(token)}\n" + string.Join("\n", mapEvent.Item2)
+                                LastDialog = $"【{gameDataFile.FileName}】 {GetMapName(token)}\n" + (mapEvent.Item2 != null ? string.Join("\n", mapEvent.Item2) : "无前置对话")
                             });
                         }
                     }
