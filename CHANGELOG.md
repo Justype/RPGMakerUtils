@@ -1,5 +1,12 @@
 # Version History
 
+## Version 2.2.0 RPG Maker Utils
+
+- 用换行符`\n`分割文本，显著提升了翻译性能
+- 使用 `Bitmap.prototype.drawText` 和 `Bitmap.prototype.measureText`，解决了部分插件中，文本未被翻译的问题（可能会导致宽度计算不准确）
+- 尝试删除一些不需要的翻译方法
+- 删除了插件里面的注释(code 108)的翻译功能
+
 ## Version 2.1.2 RPG Maker Utils
 
 - 更新了自制插件：增加了注释(code 108)的一次性翻译

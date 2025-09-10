@@ -6,9 +6,9 @@
 
 ## 功能
 
-1. 加载 MTools 的翻译 json 文件，
+1. 加载 MTools 的翻译文件 (推荐使用插件进行翻译)
    1. 翻译插件：加载我的翻译插件，并解析json文件，保存到 `www/translations.json`
-   2. 替换翻译：修改 `data/*json` 文件 和 `js/plugins.js` 文件
+   2. 替换翻译：根据json文件，修改 `data/*json` 文件 和 `js/plugins.js` 文件
 2. 修改字体 （复制系统字体到 www/Fonts，并修改CSS）
 3. 添加作弊，使用的是 [paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin) 的代码
 4. 找游戏的宝箱密码
@@ -34,11 +34,26 @@
 
 RPG Maker 的相关方法：
 
-- `Window_Command.prototype.addCommand` 添加选项
-- `Window_Message.prototype.startMessage` 对话之类的
-- `Window_Base.prototype.convertEscapeCharacters` 转义字符 (会被`Window_Base.prototype.drawTextEx`调用)
-  - `Window_Base.prototype.drawTextEx` 是很多插件会调用的方法
-  - `Window_Base.prototype.convertEscapeCharacters` 也会被某些插件调用
+- `Bitmap.prototype.drawText()` 绘制文本
+  - `Window_Base.contexts` 就是 `Bitmap` 的实例
+  - `Window_Base.prototype.drawText()` 就调用了 `this.contents.drawText()` 也就是 `Bitmap.prototype.drawText()`
+- `Bitmap.prototype.measureTextWidth()` 测量文本宽度 (例如计算选项的宽度)
+- `Window_Base.prototype.convertEscapeCharacters()` 转义字符 (会被`Window_Base.prototype.drawTextEx()`调用)
+  - `Window_Base.prototype.drawTextEx()` 绘制高级文本，是很多插件会调用的方法
+  - `Window_Base.prototype.convertEscapeCharacters()` 也会被某些插件调用
+
+总结就是：
+
+1. 只要覆盖了`Bitmap.prototype.drawText()`，`Bitmap.prototype.measureTextWidth()`和`Window_Base.prototype.convertEscapeCharacters()`，大部分的游戏内容和插件都能被翻译
+   1. 于此同时，因为覆盖了这么多的方法，提升翻译方法的效率是必要的
+   2. 所以要做的几个重要事情是：
+       1. 将已经翻译过的内容保存到集合中，以避免重复翻译
+       2. 如果遇到字典里没有的内容，由键的长度从长到短依次匹配
+       3. 无论是否找到了，都将“译文”保存到集合中，以避免重复翻译或浪费计算资源
+       4. 将内容拆分成更小的部分进行翻译（使用`\n`拆分）
+2. 又为了方便使用作弊插件，常用的游戏内容（物品、技能、状态、敌人等）都在游戏加载时直接替换
+
+详细内容请查看 RPG Maker MV/MZ 的源码。就在 `js/rpg_objects.js`， `js/rpg_windows.js` 和 `js/rpg_managers.js` 文件中
 
 ## 替换翻译原理
 

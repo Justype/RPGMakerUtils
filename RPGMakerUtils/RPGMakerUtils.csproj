@@ -30,8 +30,8 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>2</ApplicationRevision>
-    <ApplicationVersion>2.1.2.%2a</ApplicationVersion>
+    <ApplicationRevision>4</ApplicationRevision>
+    <ApplicationVersion>2.2.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
@@ -176,7 +176,6 @@
     <Compile Include="ViewModels\CommonViewModel.cs" />
     <Compile Include="Converters\FileExistsConverter.cs" />
     <Compile Include="ViewModels\EditFontViewModel.cs" />
-    <Compile Include="ViewModels\PasswordViewModel.cs" />
     <Compile Include="ViewModels\ImportViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\SearchPasswordViewModel.cs" />
@@ -193,9 +192,6 @@
     </Compile>
     <Compile Include="Views\ImportUserControl.xaml.cs">
       <DependentUpon>ImportUserControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\PasswordUserControl.xaml.cs">
-      <DependentUpon>PasswordUserControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\SearchPasswordUserControl.xaml.cs">
       <DependentUpon>SearchPasswordUserControl.xaml</DependentUpon>
@@ -234,10 +230,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ImportUserControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\PasswordUserControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
