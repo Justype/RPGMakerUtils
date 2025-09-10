@@ -44,6 +44,8 @@ namespace RPGMakerUtils.Resources
 
         public static int PluginArrayCode { get; } = 356;
 
+        public static int CommentCode { get; } = 108;
+
         public static int PluginObjectCode { get; } = 357;
 
         /// <summary>
@@ -64,7 +66,7 @@ namespace RPGMakerUtils.Resources
         /// <param name="str">target string</param>
         /// <param name="translations">translation dict</param>
         /// <returns></returns>
-        private string TranslateString(string str)
+        private string TranslateString(string str, int times = int.MaxValue)
         {
             if (str == null || str.Length == 0)
                 return str;
@@ -74,10 +76,17 @@ namespace RPGMakerUtils.Resources
             var orderedKeyLengths = LengthKeyDict.Keys.Where(len => len < str.Length)
                                                       .OrderByDescending(len => len);
 
+            int count = 0;
+
             foreach (int len in orderedKeyLengths)
             {
                 foreach (string key in LengthKeyDict[len])
+                {
                     str = str.Replace(key, Translations[key]);
+                    count++;
+                    if (count >= times)
+                        return str;
+                }
             }
             return str;
         }
@@ -251,7 +260,7 @@ namespace RPGMakerUtils.Resources
         /// </summary>
         /// <param name="token"></param>
         /// <param name="isCodeChildren"></param>
-        public void TranslateGameEvents(JToken token, bool isCodeChildren = false)
+        public void TranslateGameEvents(JToken token, bool isCodeChildren = false, int times = int.MaxValue)
         {
             switch (token.Type)
             {
@@ -263,6 +272,8 @@ namespace RPGMakerUtils.Resources
                         int code = (int)jobject["code"];
                         if (DialogCode.Contains(code))
                             TranslateGameEvents(jobject["parameters"], true);
+                        else if (code == CommentCode)
+                            TranslateGameEvents(jobject["parameters"], true, times: 1);
                         else if (code == PluginObjectCode)
                             TranslateRPGMakerPluginObject(jobject);
                         else if (code == PluginArrayCode)
@@ -285,7 +296,7 @@ namespace RPGMakerUtils.Resources
                     break;
                 case JTokenType.String:
                     if (isCodeChildren)
-                        token.Replace(TranslateString(token.ToString().Trim()));
+                        token.Replace(TranslateString(token.ToString().Trim(), times));
                     break;
                 default:
                     break;

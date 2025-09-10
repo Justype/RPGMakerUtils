@@ -78,7 +78,7 @@
         }, {});
     };
 
-    TranslationManager.translate = function (text, detectStartWhitespace = true) {
+    TranslationManager.translate = function (text, detectStartWhitespace = true, times = Number.POSITIVE_INFINITY) {
         if (typeof text !== 'string' || !this._dict || this._translatedSet.has(text)) {
             return text;
         }
@@ -93,6 +93,7 @@
         // If not in the dictionary, try to find partial matches
         let translatedText = text;
         if (this._dict && this._lengthKeyDict) {
+            let count = 0;
             const textLength = text.length;
             const lenSorted = Object.keys(this._lengthKeyDict)
                 .map(l => parseInt(l, 10))
@@ -100,11 +101,17 @@
                 .sort((a, b) => b - a); // Descending order
 
             // Go through all possible length buckets
-            lenSorted.forEach(len => {
-                this._lengthKeyDict[len].forEach(key => {
-                    translatedText = translatedText.replace(key, this._dict[key]);
-                });
-            });
+            outer: for (let len of lenSorted) {
+                for (let key of this._lengthKeyDict[len]) {
+                    if (translatedText.includes(key)) {
+                        translatedText = translatedText.replace(key, this._dict[key]);
+                        count++;
+                        if (count >= times) {
+                            break outer;
+                        }
+                    }
+                }
+            }
 
             translatedText = detectStartWhitespace ? leadingSpaces + translatedText : translatedText;
         }
@@ -153,12 +160,12 @@
         const fs = require('fs');
         if (!fs) return;
 
-        var dictPath = this._dictPath;
+        let dictPath = this._dictPath;
         if (Utils.RPGMAKER_NAME === "MV") {
             dictPath = 'www/' + dictPath;
         }
         const backupDictPath = dictPath.replace(/(\.json)?$/, '_backup.json');
-        var jsonString = JSON.stringify(this._dict, null, 2);
+        let jsonString = JSON.stringify(this._dict, null, 2);
         try {
             fs.writeFileSync(backupDictPath, jsonString, 'utf8');
             if (fs.existsSync(dictPath)) {
@@ -172,7 +179,9 @@
             }
         }
     };
+    //#endregion
 
+    //#region Data
     TranslationManager.translateEventCommandText = function (command) {
         switch (command.code) {
             case 101: // first parameter is the text (character name?)
@@ -190,89 +199,52 @@
             case 405: // Only one parameter (text)
                 command.parameters[0] = TranslationManager.translate(command.parameters[0]);
                 break;
+            case 108: // Comment
+            case 408: // Conditional Branch (comment)
+                command.parameters[0] = TranslationManager.translate(command.parameters[0], detectStartWhitespace = false, times = 1);
+                break;
         }
     };
 
-    TranslationManager.translateEventCommandTextOld = function (command) {
-        if ([101, 401, 102, 402, 405].includes(command.code) && Array.isArray(command.parameters)) {
-            command.parameters = command.parameters.map(param => {
-                if (typeof param === 'string') {
-                    return TranslationManager.translate(param);
-                } else if (Array.isArray(param)) {
-                    return param.map(p => typeof p === 'string' ? TranslationManager.translate(p) : p);
-                }
-                return param;
-            });
+    TranslationManager.translateEventCommandComment = function (command) {
+        if (command.code === 108) {
+            command.parameters[0] = TranslationManager.translate(command.parameters[0], detectStartWhitespace = false, times = 1);
         }
     };
-    //#endregion
 
-    //#region Plugin
-    function patchPlugin() {
-        // TextResource (RPG Maker MZ)
-        if (typeof TextResource !== 'undefined' && TextResource.getText) {
-            const _TextResource_getText = TextResource.getText;
-            TextResource.getText = function (label) {
-                const text = _TextResource_getText.call(this, label);
-                return TranslationManager.translate(text);
-            };
-        }
-    };
-    //#endregion
+    // TranslationManager.translateEventCommandTextOld = function (command) {
+    //     if ([101, 401, 102, 402, 405].includes(command.code) && Array.isArray(command.parameters)) {
+    //         command.parameters = command.parameters.map(param => {
+    //             if (typeof param === 'string') {
+    //                 return TranslationManager.translate(param);
+    //             } else if (Array.isArray(param)) {
+    //                 return param.map(p => typeof p === 'string' ? TranslationManager.translate(p) : p);
+    //             }
+    //             return param;
+    //         });
+    //     }
+    // };
 
-    //#region Initialization
-    // --- Core Logic: Load the Translation Dictionary ---
-    // This function is aliased to load our custom data before the game starts.
-    const _DataManager_loadDatabase = DataManager.loadDatabase;
-    DataManager.loadDatabase = function () {
-        _DataManager_loadDatabase.call(this);
-        // Get plugin parameters
-        var parameters = PluginManager.parameters('JtJsonTranslationManager');
-        var translationPath = parameters['translationPath'] || 'translations.json';
-        TranslationManager._dictPath = translationPath;
-        const xhr = new XMLHttpRequest();
-        const url = translationPath;
-        xhr.open('GET', url, false);
-        xhr.overrideMimeType('application/json');
-        xhr.onload = function () {
-            if (xhr.status < 400) {
-                TranslationManager.initialize(JSON.parse(xhr.responseText));
+    TranslationManager.translateDataMap = function () {
+        if ($dataMap) {
+            if ($dataMap.displayName) {
+                $dataMap.displayName = TranslationManager.translate($dataMap.displayName);
             }
-        };
-        xhr.onerror = function () {
-            throw new Error('Failed to load ' + url);
-        };
-        xhr.send();
-    };
-
-    // Patch DataManager.onLoad to run translation after all database files are loaded
-    const _DataManager_onLoad = DataManager.onLoad;
-    DataManager._translationApplied = false;
-    DataManager.onLoad = function (object) {
-        _DataManager_onLoad.call(this, object);
-        if (DataManager.isDatabaseLoaded() && !DataManager._translationApplied && TranslationManager.isInitialized()) {
-            DataManager_translateCommonData();
-            patchPlugin();
-            DataManager._translationApplied = true;
+            if ($dataMap.events) {
+                $dataMap.events.forEach(event => {
+                    if (event && event.pages) {
+                        event.pages.forEach(page => {
+                            if (page.list) {
+                                page.list.forEach(TranslationManager.translateEventCommandComment);
+                            }
+                        });
+                    }
+                });
+            }
         }
     };
 
-    const _DataManager_loadMapData = DataManager.loadMapData;
-    DataManager.loadMapData = function (mapId) {
-        _DataManager_loadMapData.call(this, mapId);
-        const _onLoad = DataManager.onLoad;
-        DataManager.onLoad = function (object) {
-            _onLoad.call(this, object);
-            if (object === $dataMap && TranslationManager.isInitialized()) {
-                DataManager_translateMapData();
-            }
-            TranslationManager.saveDictionary();
-        };
-    };
-
-    window.TranslationManager = TranslationManager;
-
-    function DataManager_translateCommonData() {
+    TranslationManager.translateCommonData = function () {
         // Translate map names in $dataMapInfos
         if ($dataMapInfos) {
             $dataMapInfos.forEach(mapInfo => {
@@ -340,38 +312,81 @@
         }
 
         // Do not translate event when loaded, otherwise the game will freeze for a long time until all events are translated
-        // // Translate event text and choices in common events
-        // if ($dataCommonEvents) {
-        //     $dataCommonEvents.forEach(event => {
-        //         if (event && event.list) {
-        //             event.list.forEach(TranslationManager.translateEventCommandText);
-        //         }
-        //     });
-        // }
-    }
-
-    // Do not call this function. The same issue as common events.
-    // To make things worse, everytime you change map, it will be called again.
-    function DataManager_translateMapData() {
-        // Translate Map display names
-        if ($dataMap) {
-            if ($dataMap.displayName) {
-                $dataMap.displayName = TranslationManager.translate($dataMap.displayName);
-            }
-            // // Translate event text and choices in the current map
-            // if ($dataMap.events) {
-            //     $dataMap.events.forEach(event => {
-            //         if (event && event.pages) {
-            //             event.pages.forEach(page => {
-            //                 if (page.list) {
-            //                     page.list.forEach(TranslationManager.translateEventCommandText);
-            //                 }
-            //             });
-            //         }
-            //     });
-            // }
+        // Translate event text and choices in common events
+        if ($dataCommonEvents) {
+            $dataCommonEvents.forEach(event => {
+                if (event && event.list) {
+                    event.list.forEach(TranslationManager.translateEventCommandComment);
+                }
+            });
         }
-    }
+    };
+    //#endregion
+
+    //#region Plugin
+    function patchPlugin() {
+        // TextResource (RPG Maker MZ)
+        if (typeof TextResource !== 'undefined' && TextResource.getText) {
+            const _TextResource_getText = TextResource.getText;
+            TextResource.getText = function (label) {
+                const text = _TextResource_getText.call(this, label);
+                return TranslationManager.translate(text);
+            };
+        }
+    };
+    //#endregion
+
+    //#region Initialization
+    // --- Core Logic: Load the Translation Dictionary ---
+    // This function is aliased to load our custom data before the game starts.
+    const _DataManager_loadDatabase = DataManager.loadDatabase;
+    DataManager.loadDatabase = function () {
+        _DataManager_loadDatabase.call(this);
+        // Get plugin parameters
+        let parameters = PluginManager.parameters('JtJsonTranslationManager');
+        let translationPath = parameters['translationPath'] || 'translations.json';
+        TranslationManager._dictPath = translationPath;
+        const xhr = new XMLHttpRequest();
+        const url = translationPath;
+        xhr.open('GET', url, false);
+        xhr.overrideMimeType('application/json');
+        xhr.onload = function () {
+            if (xhr.status < 400) {
+                TranslationManager.initialize(JSON.parse(xhr.responseText));
+            }
+        };
+        xhr.onerror = function () {
+            throw new Error('Failed to load ' + url);
+        };
+        xhr.send();
+    };
+
+    // Patch DataManager.onLoad to run translation after all database files are loaded
+    const _DataManager_onLoad = DataManager.onLoad;
+    DataManager._translationApplied = false;
+    DataManager.onLoad = function (object) {
+        _DataManager_onLoad.call(this, object);
+        if (DataManager.isDatabaseLoaded() && !DataManager._translationApplied && TranslationManager.isInitialized()) {
+            TranslationManager.translateCommonData();
+            patchPlugin();
+            DataManager._translationApplied = true;
+        }
+    };
+
+    const _DataManager_loadMapData = DataManager.loadMapData;
+    DataManager.loadMapData = function (mapId) {
+        _DataManager_loadMapData.call(this, mapId);
+        const _onLoad = DataManager.onLoad;
+        DataManager.onLoad = function (object) {
+            _onLoad.call(this, object);
+            if (object === $dataMap && TranslationManager.isInitialized()) {
+                TranslationManager.translateDataMap();
+            }
+            TranslationManager.saveDictionary();
+        };
+    };
+
+    window.TranslationManager = TranslationManager;
     //#endregion
 
     //#region Patches
