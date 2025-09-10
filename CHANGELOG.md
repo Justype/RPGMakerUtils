@@ -1,8 +1,13 @@
 # Version History
 
+## Version 2.1.2 RPG Maker Utils
+
+- 更新了自制插件：增加了注释(code 108)的一次性翻译
+- 修复了查找密码时，没有前置对话，Null Error的BUG
+
 ## Version 2.1.1 RPG Maker Utils
 
-- 自己的翻译插件：`JtJsonTranslationManager.js`
+- 自制的翻译插件：`JtJsonTranslationManager.js`
 - 增加插件翻译功能
 - 增加了回退支持，可以撤销修改（翻译，字体，作弊）
 - 增强了翻译方法的性能
