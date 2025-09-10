@@ -24,7 +24,7 @@
             <LineBreak/>
             - 如果使用翻译插件时，遇到了 <Bold>TranslationManager.XXX</Bold> is not a function 的错误，请直接提交Issue，我会尽快实现那个方法。
             <LineBreak/>
-            - 如果使用替换翻译时，遇到了没有翻译的，请提交Issue并附上 <Bold>data.zip</Bold>，<Bold>js/plugins.js</Bold> 以及 <Bold>未翻译的文本</Bold>，有能力的请直接给出插件的名字和要翻译的键值对，感谢 🤝！
+            - 如果使用替换翻译时，遇到了没有翻译的，建议使用翻译插件。（如果是用JoiPlay玩，翻译插件可能会部分失效）
             <LineBreak/>
             <Run Text="感谢使用与支持！" FontSize="18" FontWeight="Bold"/>
         </TextBlock>

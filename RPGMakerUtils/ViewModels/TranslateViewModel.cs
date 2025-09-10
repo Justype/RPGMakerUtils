@@ -114,6 +114,12 @@ namespace RPGMakerUtils.ViewModels
 
         public async Task TranslateAllAsync()
         {
+            if (!CanTranslate())
+            {
+                MessageBox.Show("无法翻译，可能是因为游戏目录无效、已经翻译过或翻译文件无效", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
 
             await Task.Run(async () =>
@@ -153,7 +159,14 @@ namespace RPGMakerUtils.ViewModels
 
         public async Task RestoreAsync()
         {
+            if (!CanRestore())
+            {
+                MessageBox.Show("无法还原，可能是因为没有备份文件", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
+
             await Task.Run(async () =>
             {
                 bool isSuccess = true;

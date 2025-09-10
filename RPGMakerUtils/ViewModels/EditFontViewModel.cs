@@ -117,6 +117,12 @@ namespace RPGMakerUtils.ViewModels
 
         private async Task EditFontAsync()
         {
+            if (!CanEditFont())
+            {
+                MessageBox.Show("无法修改字体，可能是因为游戏目录无效或已经修改过字体", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
 
             await Task.Run(async () =>
@@ -162,6 +168,12 @@ namespace RPGMakerUtils.ViewModels
 
         private async Task RestoreAsync()
         {
+            if (!CanRestore())
+            {
+                MessageBox.Show("无法还原字体，可能是因为游戏目录无效或没有备份文件", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+            
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
 
             await Task.Run(async () =>

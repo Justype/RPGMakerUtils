@@ -46,6 +46,12 @@ namespace RPGMakerUtils.ViewModels
 
         private async Task AddCheatAsync()
         {
+            if (!CanAddCheat())
+            {
+                MessageBox.Show("无法添加作弊，可能是因为游戏目录无效或已经添加过作弊", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
 
             await Task.Run(async () =>
@@ -120,7 +126,9 @@ namespace RPGMakerUtils.ViewModels
                 MessageBox.Show("没有找到备份文件，无法恢复", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
+
             await Task.Run(async () =>
             {
                 try
@@ -131,6 +139,12 @@ namespace RPGMakerUtils.ViewModels
                     string versionJsonPath = Path.Combine(GameWwwPath, "cheat-version-description.json");
                     string cheatFolderPath = Path.Combine(GameWwwPath, "cheat");
                     string cheatSettingsFolderPath = Path.Combine(GameWwwPath, "cheat-settings");
+
+                    if (GameVersion == RPGMakerVersion.MZ)
+                    {
+                        // In MZ, www/cheat-settings
+                        cheatSettingsFolderPath = Path.Combine(GamePath, "www", "cheat-settings");
+                    }
 
                     if (File.Exists(versionJsonPath))
                         File.Delete(versionJsonPath);
