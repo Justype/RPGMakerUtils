@@ -18,6 +18,7 @@
     </UserControl.DataContext>
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
             <RowDefinition Height="4*"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -25,7 +26,11 @@
             <ColumnDefinition Width="2*"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <TextBlock Grid.ColumnSpan="2" LineHeight="25" TextWrapping="WrapWithOverflow">
+        <StackPanel Orientation="Horizontal" Grid.ColumnSpan="2">
+            <TextBlock Text="插件版本：" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding AvailablePluginVersions}" SelectedItem="{Binding SelectedPluginVersion}" Margin="5,0"/>
+        </StackPanel>
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" LineHeight="25" TextWrapping="WrapWithOverflow">
             <Bold>翻译文件：</Bold> <Run Text="{Binding TranslateJsonPath, Converter={StaticResource FileNameConverter}}"/>
             <LineBreak/>
             会修改游戏的 <Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>js/plugins.js 文件，添加我的翻译插件到插件列表中
@@ -41,7 +46,7 @@
             - 由于进入地图会重新加载地图事件，所以对于地图事件的翻译，插件会在进入地图时，动态替换为翻译后的内容
         </TextBlock>
 
-        <Button Grid.Row="1" FontSize="20" Content="添加插件" Command="{Binding AddTranslationPluginCommand}" Margin="0,5,0,0"/>
-        <Button Grid.Row="1" Grid.Column="1" FontSize="20" Content="回退" Command="{Binding RestoreCommand}" Margin="5,5,0,0"/>
+        <Button Grid.Row="2" FontSize="20" Content="添加插件" Command="{Binding AddTranslationPluginCommand}" Margin="0,5,0,0"/>
+        <Button Grid.Row="2" Grid.Column="1" FontSize="20" Content="回退" Command="{Binding RestoreCommand}" Margin="5,5,0,0"/>
     </Grid>
 </UserControl>

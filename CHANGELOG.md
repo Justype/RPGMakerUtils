@@ -1,5 +1,12 @@
 # Version History
 
+## Version 2.2.1 RPG Maker Utils
+
+- 支持切换不同版本的翻译插件
+  - `Faster` 更快的翻译速度，部分菜单可能未被翻译
+  - `Broader` 更全面的翻译，速度较慢
+- 取消了自签名，减小杀毒软件误报的概率
+
 ## Version 2.2.0 RPG Maker Utils
 
 - 用换行符`\n`分割文本，显著提升了翻译性能

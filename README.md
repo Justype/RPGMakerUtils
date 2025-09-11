@@ -8,6 +8,8 @@
 
 1. 加载 MTools 的翻译文件 (推荐使用插件进行翻译)
    1. 翻译插件：加载我的翻译插件，并解析json文件，保存到 `www/translations.json`
+      1. `Faster` 更快的翻译速度，部分菜单可能未被翻译
+      2. `Broader` 更全面的翻译，速度较慢 （推荐，但在JoiPlay里面可能会出现插件菜单未翻译的情况）
    2. 替换翻译：根据json文件，修改 `data/*json` 文件 和 `js/plugins.js` 文件
 2. 修改字体 （复制系统字体到 www/Fonts，并修改CSS）
 3. 添加作弊，使用的是 [paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin) 的代码
@@ -22,7 +24,7 @@
 4. 点击修改按钮
 5. 等待修改完成
 
-<image src="./assets/1.png" alt="Select Game Directory" width="300"/>
+<image src="./assets/1.png" alt="Select Game Directory" width="400"/>
 
 # 原理
 
@@ -31,6 +33,17 @@
 - 对于常用的、只加载一次的字段，直接在游戏加载时替换
 - 对于地图事件的对话和选项之类的，替换游戏的渲染方法
 - 并且将类命名为`TranslationManager`，有些插件会调用这个类
+
+### Faster 翻译原理
+
+RPG Maker 的相关方法：
+
+- `Window_Message.prototype.startMessage()` 添加对话
+- `Window_Command.prototype.addCommand()` 添加选项
+- `Window_BattleLog.prototype.addText()` 战斗日志
+- `Window_Base.prototype.convertEscapeCharacters()` 会被很多插件调用
+
+### Broader 翻译原理
 
 RPG Maker 的相关方法：
 

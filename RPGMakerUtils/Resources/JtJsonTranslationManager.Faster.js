@@ -1,7 +1,7 @@
 /*:
  * @plugindesc A plugin to translate RPG Maker game text using a JSON dictionary.
  * @author Justype
- * @version 2.2.1
+ * @version 2.2.1 Faster
  *
  * @help
  * This plugin loads a 'translations.json' file from the 'www' folder and uses it to translate various text strings in the game.
@@ -168,98 +168,33 @@
             resolve(result);
         });
     };
-
-    // TranslationManager.saveDictionary = function () {
-    //     // Use Electron's fs module to save the updated dictionary
-    //     if (!this._isDictChanged || !this._dictPath) return;
-    //     this._isDictChanged = false; // Reset the flag
-    //     if (typeof require !== 'function') return; // Not in an environment that supports require
-    //     const fs = require('fs');
-    //     if (!fs) return;
-
-    //     let dictPath = this._dictPath;
-    //     if (Utils.RPGMAKER_NAME === "MV") {
-    //         dictPath = 'www/' + dictPath;
-    //     }
-    //     const backupDictPath = dictPath.replace(/(\.json)?$/, '_backup.json');
-    //     let jsonString = JSON.stringify(this._dict, null, 2);
-    //     try {
-    //         fs.writeFileSync(backupDictPath, jsonString, 'utf8');
-    //         if (fs.existsSync(dictPath)) {
-    //             fs.unlinkSync(dictPath);
-    //         }
-    //         fs.renameSync(backupDictPath, dictPath);
-    //     } catch (err) {
-    //         console.error("Error saving file:", err);
-    //         if (fs.existsSync(backupDictPath)) {
-    //             fs.unlinkSync(backupDictPath);
-    //         }
-    //     }
-    // };
     //#endregion
 
     //#region Data
-    // TranslationManager.translateEventCommandText = function (command) {
-    //     switch (command.code) {
-    //         case 101: // first parameter is the text (character name?)
-    //             command.parameters[0] = TranslationManager.translate(command.parameters[0]);
-    //             break;
-    //         case 401: // Only one parameter which is the text
-    //             command.parameters[0] = TranslationManager.translate(command.parameters[0]);
-    //             break;
-    //         case 102: // The first parameter is a list of choices
-    //             command.parameters[0] = command.parameters[0].map(choice => TranslationManager.translate(choice));
-    //             break;
-    //         case 402: // second parameter is the text of the choices
-    //             command.parameters[1] = TranslationManager.translate(command.parameters[1]);
-    //             break;
-    //         case 405: // Only one parameter (text)
-    //             command.parameters[0] = TranslationManager.translate(command.parameters[0]);
-    //             break;
-    //         case 108: // Comment
-    //         case 408: // Conditional Branch (comment)
-    //             command.parameters[0] = TranslationManager.translate(command.parameters[0], detectStartWhitespace = false, times = 1);
-    //             break;
-    //     }
-    // };
-
     TranslationManager.translateEventCommandComment = function (command) {
         if (command.code === 108) {
             command.parameters[0] = TranslationManager.translate(command.parameters[0], detectStartWhitespace = false, times = 1);
         }
     };
 
-    // TranslationManager.translateEventCommandTextOld = function (command) {
-    //     if ([101, 401, 102, 402, 405].includes(command.code) && Array.isArray(command.parameters)) {
-    //         command.parameters = command.parameters.map(param => {
-    //             if (typeof param === 'string') {
-    //                 return TranslationManager.translate(param);
-    //             } else if (Array.isArray(param)) {
-    //                 return param.map(p => typeof p === 'string' ? TranslationManager.translate(p) : p);
-    //             }
-    //             return param;
-    //         });
-    //     }
-    // };
-
-     TranslationManager.translateDataMap = function () {
-         if ($dataMap) {
-             if ($dataMap.displayName) {
-                 $dataMap.displayName = TranslationManager.translate($dataMap.displayName);
-             }
-             // if ($dataMap.events) {
-             //     $dataMap.events.forEach(event => {
-             //         if (event && event.pages) {
-             //             event.pages.forEach(page => {
-             //                 if (page.list) {
-             //                     page.list.forEach(TranslationManager.translateEventCommandComment);
-             //                 }
-             //             });
-             //         }
-             //     });
-             // }
-         }
-     };
+    TranslationManager.translateDataMap = function () {
+        if ($dataMap) {
+            if ($dataMap.displayName) {
+                $dataMap.displayName = TranslationManager.translate($dataMap.displayName);
+            }
+            if ($dataMap.events) {
+                $dataMap.events.forEach(event => {
+                    if (event && event.pages) {
+                        event.pages.forEach(page => {
+                            if (page.list) {
+                                page.list.forEach(TranslationManager.translateEventCommandComment);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    };
 
     TranslationManager.translateCommonData = function () {
         // Translate map names in $dataMapInfos
@@ -328,14 +263,14 @@
             }
         }
 
-        // // Translate event text and choices in common events
-        // if ($dataCommonEvents) {
-        //     $dataCommonEvents.forEach(event => {
-        //         if (event && event.list) {
-        //             event.list.forEach(TranslationManager.translateEventCommandComment);
-        //         }
-        //     });
-        // }
+        // Translate event text and choices in common events
+        if ($dataCommonEvents) {
+            $dataCommonEvents.forEach(event => {
+                if (event && event.list) {
+                    event.list.forEach(TranslationManager.translateEventCommandComment);
+                }
+            });
+        }
     };
     //#endregion
 
@@ -392,63 +327,32 @@
         if (object === $dataMap && TranslationManager.isInitialized()) {
             TranslationManager.translateDataMap();
         }
-
-        // TranslationManager.saveDictionary();
     };
 
     window.TranslationManager = TranslationManager;
     //#endregion
 
     //#region Patches
-    // // Choices and other command window text
-    // const _Window_Command_addCommand = Window_Command.prototype.addCommand;
-    // Window_Command.prototype.addCommand = function (name, symbol, enabled = true, ext = null) {
-    //     _Window_Command_addCommand.call(this, TranslationManager.translate(name), symbol, enabled, ext);
-    // };
-
-    // // Message window text
-    // const _Window_Message_startMessage = Window_Message.prototype.startMessage;
-    // Window_Message.prototype.startMessage = function () {
-    //     for (let i = 0; i < $gameMessage._texts.length; i++) {
-    //         $gameMessage._texts[i] = TranslationManager.translate($gameMessage._texts[i]);
-    //     }
-    //     _Window_Message_startMessage.call(this);
-    // };
-
-    // // Battle log text ??
-    // const _Window_BattleLog_addText = Window_BattleLog.prototype.addText;
-    // Window_BattleLog.prototype.addText = function (text) {
-    //     _Window_BattleLog_addText.call(this, TranslationManager.translate(text));
-    // };
-
-    // Thanks to the improvement in translate function, this is be acceptable now.
-    // Window_Base.drawText is implemented in terms of Bitmap.drawText, so patching Bitmap.drawText should cover most cases.
-    const _Bitmap_drawText = Bitmap.prototype.drawText;
-    Bitmap.prototype.drawText = function (text, x, y, maxWidth, lineHeight, align) {
-        if (text) {
-            return _Bitmap_drawText.call(this, TranslationManager.translate(text), x, y, maxWidth, lineHeight, align);
-        } else {
-            return _Bitmap_drawText.call(this, text, x, y, maxWidth, lineHeight, align);
-        }
+    // Choices and other command window text
+    const _Window_Command_addCommand = Window_Command.prototype.addCommand;
+    Window_Command.prototype.addCommand = function (name, symbol, enabled = true, ext = null) {
+        _Window_Command_addCommand.call(this, TranslationManager.translate(name), symbol, enabled, ext);
     };
 
-    const _Bitmap_measureTextWidth = Bitmap.prototype.measureTextWidth;
-    Bitmap.prototype.measureTextWidth = function (text) {
-        if (text) {
-            return _Bitmap_measureTextWidth.call(this, TranslationManager.translate(text));
-        } else {
-            return _Bitmap_measureTextWidth.call(this, text);
+    // Message window text
+    const _Window_Message_startMessage = Window_Message.prototype.startMessage;
+    Window_Message.prototype.startMessage = function () {
+        for (let i = 0; i < $gameMessage._texts.length; i++) {
+            $gameMessage._texts[i] = TranslationManager.translate($gameMessage._texts[i]);
         }
+        _Window_Message_startMessage.call(this);
     };
 
-    // const _Window_Base_drawText = Window_Base.prototype.drawText;
-    // Window_Base.prototype.drawText = function (text, x, y, maxWidth, align) {
-    //     if (text) {
-    //         return _Window_Base_drawText.call(this, TranslationManager.translate(text), x, y, maxWidth, align);
-    //     } else {
-    //         return _Window_Base_drawText.call(this, text, x, y, maxWidth, align);
-    //     }
-    // };
+    // Battle log text ??
+    const _Window_BattleLog_addText = Window_BattleLog.prototype.addText;
+    Window_BattleLog.prototype.addText = function (text) {
+        _Window_BattleLog_addText.call(this, TranslationManager.translate(text));
+    };
 
     // // Alias the function that draws text in most windows
     // // This provides broad coverage for things like item descriptions, skill names, etc.

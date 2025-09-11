@@ -58,7 +58,19 @@ namespace RPGMakerUtils.ViewModels
                 AddTranslationPluginCommand.NotifyCanExecuteChanged();
                 RestoreCommand.NotifyCanExecuteChanged();
             });
+
+            // Plugin ComboBox
+            SelectedPluginVersion = PluginVersions.BroaderTranslation;
+            AvailablePluginVersions = new List<string>
+            {
+                PluginVersions.BroaderTranslation,
+                PluginVersions.FasterTranslation
+            };
         }
+
+        public string SelectedPluginVersion { get; set; }
+
+        public IEnumerable<string> AvailablePluginVersions { get; private set; }
 
         public string GamePluginsJsPath
         {
@@ -166,7 +178,7 @@ namespace RPGMakerUtils.ViewModels
                 }
 
                 // Copy Resources/JtJsonTranslationManager.js to TranslationPluginPath
-                await Utils.CopyEmbeddedFileAsync("RPGMakerUtils.Resources.JtJsonTranslationManager.js", TranslationPluginPath);
+                await Utils.CopyEmbeddedFileAsync($"RPGMakerUtils.Resources.{SelectedPluginVersion}", TranslationPluginPath);
 
                 // Copy TranslateJsonPath to GameWwwPath/translations.json using JSON parser
                 if (!string.IsNullOrWhiteSpace(TranslateJsonPath) && File.Exists(TranslateJsonPath))
