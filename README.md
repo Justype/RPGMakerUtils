@@ -26,6 +26,28 @@
 
 <image src="./assets/1.png" alt="Select Game Directory" width="400"/>
 
+### 直接使用插件
+
+1. 找到游戏的`js/plugins.js`文件，添加我的插件到插件列表中 (最好添加到第一个)
+2. 将我的js插件复制到`js/plugins`文件夹中，并重命名为 `JtJsonTranslationManager.js`
+3. 将json复制到
+   - `MV`: `游戏目录/www/translations.json`
+   - `MZ`: `游戏目录/translations.json`
+4. 一定要删除 json 里面的`//`“注释”
+
+```js
+{"name":"JtJsonTranslationManager","status":true,"description":"Loads translations.json and applies it.","parameters":{}},
+```
+
+“注释” 例子 （被GitHub标红）
+
+```json
+{
+  // 由XXX分享，请尊重劳动成果
+  "する": "执行",
+}
+```
+
 # 原理
 
 ## 翻译插件原理
