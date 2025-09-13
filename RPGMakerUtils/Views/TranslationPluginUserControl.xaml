@@ -39,11 +39,13 @@
             <LineBreak/>
             - 插件位置：<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>js/plugins/JtJsonTranslationManager.js <Run Text="{Binding TranslationPluginPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>
             <LineBreak/>
-            <Bold>插件的工作原理：</Bold>
+            <Bold>插件比较：</Bold>
             <LineBreak/>
-            - 对于常用的游戏内容（物品、技能、状态、敌人等），插件会直接替换为翻译后的内容（这样子可以保证使用作弊工具时，显示的内容也是翻译后的）
+            - Broader (默认): 通过修改Bitmap类实现，可以覆盖绝大部分内容
             <LineBreak/>
-            - 由于进入地图会重新加载地图事件，所以对于地图事件的翻译，插件会在进入地图时，动态替换为翻译后的内容
+            - Faster: 通过修改增加文字函数实现，速度更快，但可能会有部分内容无法翻译
+            <LineBreak/>
+            - Comprehensive: Broader + Faster，速度较慢，但覆盖面最全
         </TextBlock>
 
         <Button Grid.Row="2" FontSize="20" Content="添加插件" Command="{Binding AddTranslationPluginCommand}" Margin="0,5,0,0"/>
