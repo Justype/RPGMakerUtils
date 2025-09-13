@@ -64,7 +64,8 @@ namespace RPGMakerUtils.ViewModels
             AvailablePluginVersions = new List<string>
             {
                 PluginVersions.BroaderTranslation,
-                PluginVersions.FasterTranslation
+                PluginVersions.FasterTranslation,
+                PluginVersions.ComprehensiveTranslation
             };
         }
 

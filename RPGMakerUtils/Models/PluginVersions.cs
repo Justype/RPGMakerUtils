@@ -11,5 +11,7 @@ namespace RPGMakerUtils.Models
         public static string BroaderTranslation { get; } = "JtJsonTranslationManager.Broader.js";
 
         public static string FasterTranslation { get; } = "JtJsonTranslationManager.Faster.js";
+
+        public static string ComprehensiveTranslation { get; } = "JtJsonTranslationManager.Comprehensive.js";
     }
 }
