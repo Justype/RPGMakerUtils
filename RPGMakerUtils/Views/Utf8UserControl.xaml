@@ -27,11 +27,12 @@
                    VerticalAlignment="Center" Grid.Column="1"/>
         <TextBlock x:Name="PathTextBlock" Margin="5,2" Text="请拖入TXT文本" VerticalAlignment="Center" Grid.Column="2"/>
 
-        <Button Grid.Row="1" Content="修复乱码文件名" Click="RestoreEncodingButton_Click" Margin="0,2"/>
+        <!-- <Button Grid.Row="1" Content="修复乱码文件名" Click="RestoreEncodingButton_Click" Margin="0,2"/>
         <TextBox x:Name="EncodingTextBox" Text="GBK"
                  Margin="5,2" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center"/>
         <TextBlock x:Name="RestoreEncodingFileNameTextBlock"
-                   Margin="5,2" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"/>
+                   Margin="5,2" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"/>  -->
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="由于可能被Windows Defender视为不好的软件，文件重命名功能已被移除" FontSize="12" TextWrapping="Wrap" Margin="0,2"/>
 
         <TextBox x:Name="InputTextBox" Grid.Row="2" Grid.ColumnSpan="3"
                  AllowDrop="True" PreviewDragOver="UserControl_DragOver" PreviewDrop="UserControl_Drop"

@@ -42,28 +42,28 @@ namespace RPGMakerUtils.Views
                 MessageBox.Show($"{outputPath} 不存在！", "文件不存在", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
-            if (string.IsNullOrWhiteSpace(RestoreEncodingFileNameTextBlock.Text))
-                File.WriteAllText(outputPath, text, Encoding.UTF8);
-            else
-            {
-                string outputFolder = Path.GetDirectoryName(outputPath);
-                string outputFileName = RestoreEncodingFileNameTextBlock.Text;
-                string outputNewNamePath = Path.Combine(outputFolder, outputFileName);
-                if (!File.Exists(outputPath))
-                {
-                    MessageBox.Show($"{outputPath} 不存在！", "文件不存在", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-                else if (File.Exists(outputNewNamePath))
-                {
-                    MessageBox.Show(outputNewNamePath + " 已存在！", "文件已存在", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+            //if (string.IsNullOrWhiteSpace(RestoreEncodingFileNameTextBlock.Text))
+            File.WriteAllText(outputPath, text, Encoding.UTF8);
+            //else
+            //{
+            //    string outputFolder = Path.GetDirectoryName(outputPath);
+            //    string outputFileName = RestoreEncodingFileNameTextBlock.Text;
+            //    string outputNewNamePath = Path.Combine(outputFolder, outputFileName);
+            //    if (!File.Exists(outputPath))
+            //    {
+            //        MessageBox.Show($"{outputPath} 不存在！", "文件不存在", MessageBoxButton.OK, MessageBoxImage.Error);
+            //        return;
+            //    }
+            //    else if (File.Exists(outputNewNamePath))
+            //    {
+            //        MessageBox.Show(outputNewNamePath + " 已存在！", "文件已存在", MessageBoxButton.OK, MessageBoxImage.Error);
+            //    }
 
-                File.Delete(outputPath);
-                File.WriteAllText(outputNewNamePath, text, Encoding.UTF8);
+            //    File.Delete(outputPath);
+            //    File.WriteAllText(outputNewNamePath, text, Encoding.UTF8);
 
-                PathTextBlock.Text = outputNewNamePath;
-            }
+            //    PathTextBlock.Text = outputNewNamePath;
+            //}
         }
 
         private void UserControl_DragOver(object sender, DragEventArgs e)
@@ -116,7 +116,7 @@ namespace RPGMakerUtils.Views
                         }
                         var content = File.ReadAllText(inputFilePath, detectedEncoding);
                         InputTextBox.Text = content;
-                        RestoreEncodingFileNameTextBlock.Text = "";
+                        //RestoreEncodingFileNameTextBlock.Text = "";
                     }
                 }
             }
@@ -131,32 +131,32 @@ namespace RPGMakerUtils.Views
             e.Handled = true;
         }
 
-        private void RestoreEncodingButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(PathTextBlock.Text))
-            {
-                MessageBox.Show("请拖入需要修改的文件！");
-                return;
-            }
+        //private void RestoreEncodingButton_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (string.IsNullOrWhiteSpace(PathTextBlock.Text))
+        //    {
+        //        MessageBox.Show("请拖入需要修改的文件！");
+        //        return;
+        //    }
 
-            Encoding wrongEncoding;
+        //    Encoding wrongEncoding;
 
-            try
-            {
-                wrongEncoding = Encoding.GetEncoding(EncodingTextBox.Text);
-            }
-            catch
-            {
-                MessageBox.Show("编码错误！", "编码错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-                //wrongEncoding = Encoding.GetEncoding("GBK");
-            }
+        //    try
+        //    {
+        //        wrongEncoding = Encoding.GetEncoding(EncodingTextBox.Text);
+        //    }
+        //    catch
+        //    {
+        //        MessageBox.Show("编码错误！", "编码错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        //        return;
+        //        //wrongEncoding = Encoding.GetEncoding("GBK");
+        //    }
 
-            string fileName = Path.GetFileName(PathTextBlock.Text);
-            byte[] bytes = wrongEncoding.GetBytes(fileName); // GBK
-            string correctName = Encoding.GetEncoding("SHIFT-JIS").GetString(bytes);
+        //    string fileName = Path.GetFileName(PathTextBlock.Text);
+        //    byte[] bytes = wrongEncoding.GetBytes(fileName); // GBK
+        //    string correctName = Encoding.GetEncoding("SHIFT-JIS").GetString(bytes);
 
-            RestoreEncodingFileNameTextBlock.Text = correctName;
-        }
+        //    RestoreEncodingFileNameTextBlock.Text = correctName;
+        //}
     }
 }
