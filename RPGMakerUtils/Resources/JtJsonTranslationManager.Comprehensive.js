@@ -67,6 +67,7 @@
                 if (keyLines.length === valueLines.length) {
                     for (let i = 0; i < keyLines.length; i++) {
                         if (keyLines[i] && valueLines[i]) {
+                            if (keyLines[i].length <= 3) continue; // Skip very short lines
                             this._dict[keyLines[i]] = valueLines[i];
                             this._translatedSet.add(valueLines[i]);
                         }
