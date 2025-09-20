@@ -54,13 +54,13 @@ namespace RPGMakerUtils.Resources
         /// <summary>
         /// Regex to match escape sequences like \V[1], \N[2], \G, \C[1], \I[45], \{ }, etc. {} can include line breaks.
         /// </summary>
-        public static Regex EscapeRegex { get; } = new Regex(@"\\[a-zA-Z0-9_]+\[(?:[^\]\r\n]*)\]|\\\{(?:[^}]*)\}");
+        public static Regex EscapeRegex { get; } = new Regex(@"\\[a-zA-Z0-9_]+\[(?:[^\]\r\n]*)\]|\\\{(?:[^}]*)\}", RegexOptions.Compiled);
 
-        public static Regex VariableOrNumberRegex { get; } = new Regex(@"^([a-zA-Z_][a-zA-Z0-9_]*|\d+(\.\d+)?)$");
+        public static Regex VariableOrNumberRegex { get; } = new Regex(@"^([a-zA-Z_][a-zA-Z0-9_]*|\d+(\.\d+)?)$", RegexOptions.Compiled);
 
-        public static Regex LeadingSpacesRegex { get; } = new Regex(@"^\s*");
+        public static Regex LeadingSpacesRegex { get; } = new Regex(@"^\s*", RegexOptions.Compiled);
 
-        public static Regex TrailingSpacesRegex { get; } = new Regex(@"\s*$");
+        public static Regex TrailingSpacesRegex { get; } = new Regex(@"\s*$", RegexOptions.Compiled); // Also match colon
 
         /// <summary>
         /// RPG Maker MV and MZ DataObject Files
@@ -69,6 +69,8 @@ namespace RPGMakerUtils.Resources
             "Actors.json", "Armors.json", "Classes.json", "Enemies.json", "Items.json",
             "MapInfos.json", "Skills.json", "States.json", "Weapons.json",
         };
+
+        public bool UnsafeMode { get; set; } = false;
 
         public Dictionary<string, string> Translations { get; private set; } = new Dictionary<string, string>();
 
@@ -190,6 +192,56 @@ namespace RPGMakerUtils.Resources
         }
 
         /// <summary>
+        /// Processes a command represented by the specified JSON token, performing recursive translation on certain
+        /// parameters if the command meets specific criteria and unsafe mode is enabled.
+        /// </summary>
+        /// <remarks>This method only processes the command if <see cref="UnsafeMode"/> is enabled. It
+        /// specifically handles "Command 122" and performs recursive translation on the fifth parameter if the
+        /// operation type (fourth parameter) is set to "Script" (value 4).</remarks>
+        /// <param name="token">The JSON token representing the command to process. Must be an object containing a "parameters" property
+        /// with an array of values.</param>
+        private void TranslateCommand122(JToken token)
+        {
+            if (!UnsafeMode)
+                return;
+
+            // Command 122: Control Variables
+            if (token.Type == JTokenType.Object)
+            {
+                var jobject = token as JObject;
+                if (jobject.ContainsKey("parameters"))
+                {
+                    var parameters = jobject["parameters"];
+                    if (parameters is JArray && parameters.Count() > 0)
+                    {
+                        // 4th parameter is the operation type
+                        // 0 Constant
+                        // 1 Variable
+                        // 2 Random
+                        // 3 Game Data
+                        // 4 Script
+                        var operationType = (int)parameters[3];
+                        if (operationType == 4 && parameters.Count() > 4)
+                        {
+                            string s = parameters[4].ToString();
+                            // Only translate if it is a JS string '' or ""
+                            if (s.Length > 0 &&
+                                (s.StartsWith("'") && s.EndsWith("'")) ||
+                                (s.StartsWith("\"") && s.EndsWith("\"")))
+                            {
+                                s = s.Substring(1, s.Length - 2);
+                                if (Translations.ContainsKey(s))
+                                    s = Translations[s];
+
+                                parameters[4].Replace($"'{s}'");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Translate all string in parameters if code is Plugin Object.
         /// </summary>
         /// <param name="token"></param>
@@ -207,6 +259,8 @@ namespace RPGMakerUtils.Resources
                         var firstItem = parameters[0].ToString();
                         if (BlackWhiteList.PluginObjectWhiteList.ContainsKey(firstItem))
                             TranslateJsonWithWhiteList(parameters, BlackWhiteList.PluginObjectWhiteList[firstItem]);
+                        else if (UnsafeMode)
+                            TranslateExactJTokenRecursively(parameters, tryParseJson: false);
                     }
                 }
             }
@@ -247,6 +301,19 @@ namespace RPGMakerUtils.Resources
                                     // Join the translated parts back into a single string
                                     parametersJArray[i].Replace(string.Join(" ", itemArray));
                                 }
+                                else if (UnsafeMode)
+                                {
+                                    // If the plugin is not in the whitelist, translate all string values fully matched
+                                    for (int j = 1; j < itemArray.Length; j++)
+                                    {
+                                        // If the string is not a variable or number, translate it
+                                        if (!VariableOrNumberRegex.IsMatch(itemArray[j]))
+                                            itemArray[j] = TranslateString(itemArray[j], directMatch: true);
+                                    }
+
+                                    // Join the translated parts back into a single string
+                                    parametersJArray[i].Replace(string.Join(" ", itemArray));
+                                }
                             }
                         }
                     }
@@ -260,7 +327,7 @@ namespace RPGMakerUtils.Resources
         /// <param name="token"></param>
         /// <param name="blackList"></param>
         /// <param name="isSkip"></param>
-        private void TranslateJsonWithBlackList(JToken token, IEnumerable<string> blackList, bool isSkip = false)
+        private void TranslateJsonWithBlackList(JToken token, IEnumerable<string> blackList, Regex regex = null, bool isSkip = false)
         {
             switch (token.Type)
             {
@@ -271,7 +338,9 @@ namespace RPGMakerUtils.Resources
                     {
                         if (blackList.Contains(properties[i].Name))
                             isSkip = true;
-                        TranslateJsonWithBlackList(properties[i].Value, blackList, isSkip);
+                        else if (regex != null && regex.IsMatch(properties[i].Name))
+                            isSkip = true;
+                        TranslateJsonWithBlackList(properties[i].Value, blackList, regex, isSkip);
                         isSkip = false;
                     }
                     break;
@@ -280,7 +349,7 @@ namespace RPGMakerUtils.Resources
                     for (int i = 0; i < items.Count; i++)
                     {
                         var item = items[i];
-                        TranslateJsonWithBlackList(item, blackList, isSkip);
+                        TranslateJsonWithBlackList(item, blackList, regex, isSkip);
                     }
                     break;
                 case JTokenType.String:
@@ -347,7 +416,7 @@ namespace RPGMakerUtils.Resources
                         int code = (int)jobject["code"];
                         switch (code)
                         {
-                            // case 101: // - 101: Use for both showing text and setting face image, background, position
+                            // case 101: // - 101: Mainly used for showing image?
                             case 102: // - 102: Show Choices
                             case 401: // - 401: Text Line (under Show Text)
                             case 402: // - 402: Choice Text
@@ -356,6 +425,9 @@ namespace RPGMakerUtils.Resources
                                 break;
                             case 108: // Comment
                                 TranslateGameEvents(jobject["parameters"], true, times: 1);
+                                break;
+                            case 122:
+                                TranslateCommand122(jobject);
                                 break;
                             case 356:
                                 TranslateCommand356(jobject);
@@ -408,6 +480,8 @@ namespace RPGMakerUtils.Resources
                         TranslateGameObjects(jobject["name"], true);
                     if (jobject.ContainsKey("description"))
                         TranslateGameObjects(jobject["description"], true);
+                    if (jobject.ContainsKey("nickname"))
+                        TranslateGameObjects(jobject["nickname"], true);
                     if (jobject.ContainsKey("note"))
                     {
                         if (jobject["note"].Type == JTokenType.String)
@@ -501,32 +575,36 @@ namespace RPGMakerUtils.Resources
                     var str = token.ToString();
                     if (tryParseJson)
                     {
-                        if (str.Length > 1 &&
-                            ((str.StartsWith("'") && str.EndsWith("'")) ||
-                             (str.StartsWith("\"") && str.EndsWith("\""))))
+                        if (str.Length > 1)
                         {
-                            string innerStr = str.Substring(1, str.Length - 2);
-                            string translatedInnerStr = TranslateString(innerStr, directMatch: true);
-                            token.Replace($"'{translatedInnerStr}'");
-                            return;
-                        }
-
-                        JToken parsedToken;
-                        try
-                        {
-                            parsedToken = JToken.Parse(str);
-                            // If parsing is successful, recursively translate the parsed token
-                            TranslateExactJTokenRecursively(parsedToken, tryParseJson);
-                            // Replace the original string with the translated JSON string
-                            token.Replace(parsedToken.ToString(Formatting.None));
-                            return;
-                        }
-                        catch (JsonReaderException)
-                        {
-                            // If parsing fails, it means the string is not a valid JSON structure
-                            // Proceed to translate it as a regular string
-                            token.Replace(TranslateString(token.ToString(), directMatch: true));
-                            return;
+                            if ((str.StartsWith("'") && str.EndsWith("'")) ||
+                             (str.StartsWith("\"") && str.EndsWith("\"")))
+                            {
+                                string innerStr = str.Substring(1, str.Length - 2);
+                                string translatedInnerStr = TranslateString(innerStr, directMatch: true);
+                                token.Replace($"'{translatedInnerStr}'");
+                                return;
+                            }
+                            else
+                            {
+                                JToken parsedToken;
+                                try
+                                {
+                                    parsedToken = JToken.Parse(str);
+                                    // If parsing is successful, recursively translate the parsed token
+                                    TranslateExactJTokenRecursively(parsedToken, tryParseJson);
+                                    // Replace the original string with the translated JSON string
+                                    token.Replace(parsedToken.ToString(Formatting.None));
+                                    return;
+                                }
+                                catch (JsonReaderException)
+                                {
+                                    // If parsing fails, it means the string is not a valid JSON structure
+                                    // Proceed to translate it as a regular string
+                                    token.Replace(TranslateString(token.ToString(), directMatch: true));
+                                    return;
+                                }
+                            }
                         }
                     }
                     else
@@ -553,7 +631,7 @@ namespace RPGMakerUtils.Resources
                         var jsonRoot = JToken.Parse(json);
 
                         if (dataFile.FileName == "System.json")
-                            TranslateJsonWithBlackList(jsonRoot, BlackWhiteList.SystemBlackList);
+                            TranslateJsonWithBlackList(jsonRoot, BlackWhiteList.SystemBlackList, BlackWhiteList.SystemRegex);
                         else if (dataFile.FileName.StartsWith("CommonEvents"))
                             TranslateGameEvents(jsonRoot);
                         else if (DataObjectFiles.Contains(dataFile.FileName))
@@ -642,10 +720,15 @@ namespace RPGMakerUtils.Resources
                             }
                         }
                     }
+                    else if (UnsafeMode)
+                    {
+                        // If the plugin is not in the whitelist, translate all string values fully matched
+                        TranslateExactJTokenRecursively(pluginJObject, tryParseJson: true);
+                    }
                 }
 
                 // Replace the original JSON string with the modified one
-                string modifiedJsonString = jsonRoot.ToString(Formatting.Indented);
+                string modifiedJsonString = jsonRoot.ToString(Formatting.None);
                 File.WriteAllText(
                     pluginsJsPath,
                     Regex.Replace(jsContent, pattern, $"var $plugins = {modifiedJsonString};", RegexOptions.Singleline)

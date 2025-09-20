@@ -30,6 +30,8 @@ namespace RPGMakerUtils.ViewModels
 
         public IAsyncRelayCommand RestoreCommand { get; }
 
+        public bool IsUnsafeMode { get; set; } = true;
+
         public TranslateViewModel()
         {
             TranslateCommand = new AsyncRelayCommand(TranslateAllAsync, CanTranslate);
@@ -122,29 +124,36 @@ namespace RPGMakerUtils.ViewModels
             
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(true));
 
-            await Task.Run(async () =>
+            await Task.Run(() =>
             {
                 var translator = new RPGMakerMVZTranslator(TranslateJsonPath);
+                translator.UnsafeMode = IsUnsafeMode;
 
 #if TEST_JS
                 bool isGameDataTranslated = true;
 #else
-                await Utils.CreateZipFromFolderAsync(GameDataPath, GameDataBackupZipPath);
+                Utils.CreateZipFromFolderAsync(GameDataPath, GameDataBackupZipPath).Wait();
                 bool isGameDataTranslated = translator.TranslateAllGameData(GameDataFiles);
 #endif
 
-                await Utils.CreateZipFromFileAsync(GamePluginsJsPath, GamePluginsJsBackupPath);
+                Utils.CreateZipFromFileAsync(GamePluginsJsPath, GamePluginsJsBackupPath).Wait();
                 bool isPluginsJsTranslated = translator.TranslatePluginsJs(GamePluginsJsPath);
 
-                if (isGameDataTranslated && isPluginsJsTranslated)
+                // Return result object instead of touching UI here
+                return new { isGameDataTranslated, isPluginsJsTranslated };
+            })
+            .ContinueWith(t =>
+            {
+                // This runs on the UI thread if you configure it
+                var result = t.Result;
+                if (result.isGameDataTranslated && result.isPluginsJsTranslated)
                     MessageBox.Show("翻译成功", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
                 else
                     MessageBox.Show(
-                        isPluginsJsTranslated ? "翻译失败，请检查翻译文件" : "Plugins.js 翻译失败，请检查翻译文件",
+                        result.isPluginsJsTranslated ? "翻译失败，请检查翻译文件" : "Plugins.js 翻译失败，请检查翻译文件",
                         "失败",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-            });
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
 
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
         }

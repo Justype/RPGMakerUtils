@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace RPGMakerUtils.Resources
@@ -106,5 +107,7 @@ namespace RPGMakerUtils.Resources
         /// Black list of `System.json` keys that should not be translated.
         /// </summary>
         public static string[] SystemBlackList { get; } = { "titleBgm", "title2Name" };
+
+        public static Regex SystemRegex { get; } = new Regex(@"bgm", RegexOptions.Compiled & RegexOptions.IgnoreCase);
     }
 }
