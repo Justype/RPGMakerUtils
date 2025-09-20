@@ -26,13 +26,16 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBlock>
-            原文件会备份到 游戏文件夹/<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>data.zip
-            <Run Text="{Binding GameDataBackupZipPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>
-            <LineBreak/>
-            <Bold>翻译文件：</Bold>
-            <Run Text="{Binding TranslateJsonPath, Converter={StaticResource FileNameConverter}}"/>
-        </TextBlock>
+        <StackPanel>
+            <TextBlock>
+                原文件会备份到 游戏文件夹/<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>data.zip
+                <Run Text="{Binding GameDataBackupZipPath, Converter={StaticResource FileExistsConverter}, Mode=OneWay}"/>
+                <LineBreak/>
+                <Bold>翻译文件：</Bold>
+                <Run Text="{Binding TranslateJsonPath, Converter={StaticResource FileNameConverter}}"/>
+            </TextBlock>
+            <CheckBox Content="不安全模式（如果报错可以取消，如果还报错，请提交Issue）" IsChecked="{Binding IsUnsafeMode}" VerticalContentAlignment="Center"/>
+        </StackPanel>
 
         <Button Grid.Column="1" Content="翻译所有文件" Command="{Binding TranslateCommand}" Margin="0,0,5,0"/>
         <Button Grid.Column="2" Content="回退" Command="{Binding RestoreCommand}"/>
