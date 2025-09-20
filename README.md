@@ -11,6 +11,8 @@
       1. `Faster` 更快的翻译速度，部分菜单可能未被翻译
       2. `Broader` 更全面的翻译，速度较慢 （推荐，但在JoiPlay里面可能会出现插件菜单未翻译的情况）
    2. 替换翻译：根据json文件，修改 `data/*json` 文件 和 `js/plugins.js` 文件
+      1. 普通模式，会按白名单翻译`plugins.js`和`command356` `command357`
+      2. 不安全模式，不在白名单的，且在json中的，直接翻译
 2. 修改字体 （复制系统字体到 www/Fonts，并修改CSS）
 3. 添加作弊，使用的是 [paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin) 的代码
 4. 找游戏的宝箱密码
@@ -53,6 +55,7 @@
 ## 翻译插件原理
 
 - 对于常用的、只加载一次的字段，直接在游戏加载时替换
+- 为了方便作弊的使用，也会翻译变量 `variables` `switches`
 - 对于地图事件的对话和选项之类的，替换游戏的渲染方法
 - 并且将类命名为`TranslationManager`，有些插件会调用这个类
 
@@ -104,10 +107,16 @@ RPG Maker 的相关方法：
 - `<Object>.json` (`Actors.json`, `Armors.json`, `Classes.json`, `Enemies.json`, `Items.json`, `MapInfos.json`, `Skills.json`, `States.json`, `Weapons.json`)
   - `name`, `description`, `profile` and some `note`
 - `events.json` (`MapXXX.json`， `CommonEvents.json`)
-  - 对话、背景和选项 `code`: `101`，`401`, `102`，`402`, `405` 翻译所有 `parameters` 中的字符串
-  - 插件编码 `code`: `356` 和 `357` 使用白名单进行翻译
+  - 对话、背景和选项 `code`: `401`, `102`，`402`, `405` 翻译所有 `parameters` 中的字符串
+  - 插件编码 `code`: `356` 和 `357`
+    - 使用白名单进行翻译
+    - 如果值在字典中，直接替换
+  - 赋值 `code`: `122`
+    -  如果 且 `parameters[4]` 是简单的字符串 `'xxxxx'` 并且 值在字典中，直接替换
 - `js/plugins.js`
   - 通过白名单进行翻译
+  - 如果值在字典中，直接替换
+  - 如果值为JSON，解析完后，再遍历
 
 ### 插件代码的例子
 
