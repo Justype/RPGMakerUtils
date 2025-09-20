@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Documents;
+using System.Windows.Media;
 using System.Xml.Linq;
 
 namespace RPGMakerUtils.Resources
@@ -26,6 +27,24 @@ namespace RPGMakerUtils.Resources
         public RPGMakerMVZTranslator(Dictionary<string, string> translations)
         {
             Translations = translations;
+
+            // Split the key by \n and add them to the dictionary
+            foreach (var key in translations.Keys.ToList())
+            {
+                if (key.Contains('\n'))
+                {
+                    string[] lines = key.Split(new[] { "\n" }, StringSplitOptions.None);
+                    string[] translatedLines = translations[key].Split(new[] { "\n" }, StringSplitOptions.None);
+                    if (lines.Length == translatedLines.Length)
+                    {
+                        for (int i = 0; i < lines.Length; i++)
+                        {
+                            if (!Translations.ContainsKey(lines[i]) && lines[i].Length > 3) // Only add lines longer than 3 characters
+                                Translations.Add(lines[i], translatedLines[i]);
+                        }
+                    }
+                }
+            }
 
             LengthKeyDict = translations.Keys.GroupBy(k => k.Length)
                                              .ToDictionary(g => g.Key, g => g.ToList());
@@ -49,6 +68,11 @@ namespace RPGMakerUtils.Resources
         public static int PluginObjectCode { get; } = 357;
 
         /// <summary>
+        /// Regex to match escape sequences like \V[1], \N[2], \G, \C[1], \I[45], \{ }, etc. {} can include line breaks.
+        /// </summary>
+        public static Regex EscapeRegex { get; } = new Regex(@"\\[a-zA-Z0-9_]+\[(?:[^\]\r\n]*)\]|\\\{(?:[^}]*)\}");
+
+        /// <summary>
         /// RPG Maker MV and MZ DataObject Files
         /// </summary>
         public static string[] DataObjectFiles { get; } = {
@@ -59,6 +83,58 @@ namespace RPGMakerUtils.Resources
         public Dictionary<string, string> Translations { get; private set; } = new Dictionary<string, string>();
 
         public Dictionary<int, List<string>> LengthKeyDict { get; private set; } = new Dictionary<int, List<string>>();
+
+        /// <summary>
+        /// Do not use this function directly, use TranslateString instead.
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="times"></param>
+        /// <returns></returns>
+        private string TranslateStringUsingKeyLength(string str, int times)
+        {
+            if (str == null || str.Length == 0)
+                return str;
+
+            if (Translations.ContainsKey(str))
+                return Translations[str];
+
+            // has line breaks (only \n in the json)
+            if (str.Contains('\n'))
+            {
+                string[] lines = str.Split(new[] { "\n" }, StringSplitOptions.None);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    lines[i] = TranslateStringUsingKeyLength(lines[i], times);
+                }
+                return string.Join("\n", lines);
+            } else
+            {
+                // try to save leading and trailing spaces and check again
+                string leadingSpaces = Regex.Match(str, @"^\s*").Value;
+                string trailingSpaces = Regex.Match(str, @"\s*$").Value;
+                string trimmedStr = str.Trim();
+                if (Translations.ContainsKey(trimmedStr))
+                    return leadingSpaces + Translations[trimmedStr] + trailingSpaces;
+
+                int count = 0;
+
+                var orderedKeyLengths = LengthKeyDict.Keys.Where(len => len < str.Length)
+                                                          .OrderByDescending(len => len);
+
+                foreach (int len in orderedKeyLengths)
+                {
+                    foreach (string key in LengthKeyDict[len])
+                    {
+                        str = str.Replace(key, Translations[key]);
+                        count++;
+                        if (count >= times)
+                            return str;
+                    }
+                }
+
+                return str;
+            }
+        }
 
         /// <summary>
         /// If target string is in translations key, directly translate it. If not check all keys (ordered by length).
@@ -73,22 +149,31 @@ namespace RPGMakerUtils.Resources
             if (Translations.ContainsKey(str))
                 return Translations[str];
 
-            var orderedKeyLengths = LengthKeyDict.Keys.Where(len => len < str.Length)
-                                                      .OrderByDescending(len => len);
+            // try to save leading and trailing spaces and check again
+            string leadingSpaces = Regex.Match(str, @"^\s*").Value;
+            string trailingSpaces = Regex.Match(str, @"\s*$").Value;
+            string trimmedStr = str.Trim();
+            if (Translations.ContainsKey(trimmedStr))
+                return leadingSpaces + Translations[trimmedStr] + trailingSpaces;
 
-            int count = 0;
+            // Split the string by the escape sequences, keep the escape sequences to another array
+            var splitsTranslated = EscapeRegex.Split(str).Select(s => TranslateStringUsingKeyLength(s, times)).ToArray();
+            var escapes = EscapeRegex.Matches(str).Cast<Match>().Select(m => m.Value).ToArray();
 
-            foreach (int len in orderedKeyLengths)
+            // Reconstruct the string
+            StringBuilder result = new StringBuilder();
+            int i_escape = 0;
+            for (int i = 0; i < splitsTranslated.Length; i++)
             {
-                foreach (string key in LengthKeyDict[len])
+                result.Append(splitsTranslated[i]);
+                if (i_escape < escapes.Length)
                 {
-                    str = str.Replace(key, Translations[key]);
-                    count++;
-                    if (count >= times)
-                        return str;
+                    result.Append(escapes[i_escape]);
+                    i_escape++;
                 }
             }
-            return str;
+
+            return result.ToString();
         }
 
         private void TranslateAllValueString(JToken token)
@@ -110,7 +195,7 @@ namespace RPGMakerUtils.Resources
                     }
                     break;
                 case JTokenType.String:
-                    token.Replace(TranslateString(token.ToString().Trim()));
+                    token.Replace(TranslateString(token.ToString()));
                     break;
                 default:
                     break;
@@ -210,7 +295,7 @@ namespace RPGMakerUtils.Resources
                     break;
                 case JTokenType.String:
                     if (!isSkip)
-                        token.Replace(TranslateString(token.ToString().Trim()));
+                        token.Replace(TranslateString(token.ToString()));
                     break;
                 default:
                     break;
@@ -248,7 +333,7 @@ namespace RPGMakerUtils.Resources
                     break;
                 case JTokenType.String:
                     if (translate)
-                        token.Replace(TranslateString(token.ToString().Trim()));
+                        token.Replace(TranslateString(token.ToString()));
                     break;
                 default:
                     break;
@@ -296,7 +381,7 @@ namespace RPGMakerUtils.Resources
                     break;
                 case JTokenType.String:
                     if (isCodeChildren)
-                        token.Replace(TranslateString(token.ToString().Trim(), times));
+                        token.Replace(TranslateString(token.ToString(), times));
                     break;
                 default:
                     break;
@@ -372,7 +457,7 @@ namespace RPGMakerUtils.Resources
                     break;
                 case JTokenType.String:
                     if (is_noun)
-                        token.Replace(TranslateString(token.ToString().Trim()));
+                        token.Replace(TranslateString(token.ToString()));
                     break;
                 default:
                     break;
