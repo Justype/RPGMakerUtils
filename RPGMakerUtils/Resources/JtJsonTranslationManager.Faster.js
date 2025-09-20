@@ -1,7 +1,7 @@
 /*:
  * @plugindesc A plugin to translate RPG Maker game text using a JSON dictionary.
  * @author Justype
- * @version 2.2.1 Faster
+ * @version 2.3.0 Faster
  *
  * @help
  * This plugin loads a 'translations.json' file from the 'www' folder and uses it to translate various text strings in the game.
@@ -256,6 +256,23 @@
                         $dataSystem.terms.messages[key] = TranslationManager.translate($dataSystem.terms.messages[key]);
                     }
                 }
+            }
+
+            // Also variable and switch names
+            if ($dataSystem.variables) {
+                $dataSystem.variables.forEach((variable, i) => {
+                    if (variable) {
+                        $dataSystem.variables[i] = TranslationManager.translate(variable);
+                    }
+                });
+            }
+            if ($dataSystem.switches) {
+                $dataSystem.switches.forEach((sw, i) => {
+                    if (sw) {
+                        $dataSystem.switches[i] = TranslationManager.translate(sw);
+                    }
+                }
+                );
             }
 
             // Translate game title

@@ -1,7 +1,7 @@
 /*:
  * @plugindesc A plugin to translate RPG Maker game text using a JSON dictionary.
  * @author Justype
- * @version 2.2.1
+ * @version 2.3.0
  *
  * @help
  * This plugin loads a 'translations.json' file from the 'www' folder and uses it to translate various text strings in the game.
@@ -44,6 +44,7 @@
     TranslationManager._dict = null;
     TranslationManager._translatedSet = new Set();
     TranslationManager._lengthKeyDict = null;
+    TranslationManager._escapeRegex = /\\[a-zA-Z0-9_]+\[[^\]]*\]|\\\{[^}]*\}/g;
 
     TranslationManager._dictPath = null;
     TranslationManager._isDictChanged = false;
@@ -87,6 +88,52 @@
         }, {});
     };
 
+    TranslationManager._translateRecursively = function (text, times = Number.POSITIVE_INFINITY, cache = true) {
+        if (this._dict[text]) {
+            return this._dict[text];
+        }
+
+        // If not in the dictionary, try to find partial matches
+        let translatedText = text;
+        if (this._dict && this._lengthKeyDict) {
+            let count = 0;
+            const textLength = text.length;
+            const lenSorted = Object.keys(this._lengthKeyDict)
+                .map(l => parseInt(l, 10))
+                .filter(l => l < textLength)
+                .sort((a, b) => b - a); // Descending order
+
+            // Go through all possible length buckets
+            outer: for (let len of lenSorted) {
+                for (let key of this._lengthKeyDict[len]) {
+                    if (translatedText.includes(key)) {
+                        translatedText = translatedText.replace(key, this._dict[key]);
+                        count++;
+                        if (count >= times) {
+                            break outer;
+                        }
+                    }
+                }
+            }
+
+            if (cache && translatedText !== text) {
+                // Cache the new translation
+                this._dict[text] = translatedText;
+                if (!this._lengthKeyDict[text.length]) {
+                    this._lengthKeyDict[text.length] = [];
+                }
+                this._lengthKeyDict[text.length].push(text);
+                // this._isDictChanged = true;
+            }
+
+            // No matter what, add to translated set to avoid re-processing
+            this._translatedSet.add(translatedText);
+
+            translatedText = translatedText;
+        }
+        return translatedText;
+    };
+
     TranslationManager.translate = function (text, detectStartWhitespace = true, times = Number.POSITIVE_INFINITY, cache = true) {
         if (typeof text !== 'string' || !this._dict || this._translatedSet.has(text)) {
             return text;
@@ -111,45 +158,38 @@
             if (this._dict[text]) {
                 return detectStartWhitespace ? leadingSpaces + this._dict[text] : this._dict[text];
             }
-            // If not in the dictionary, try to find partial matches
-            let translatedText = text;
-            if (this._dict && this._lengthKeyDict) {
-                let count = 0;
-                const textLength = text.length;
-                const lenSorted = Object.keys(this._lengthKeyDict)
-                    .map(l => parseInt(l, 10))
-                    .filter(l => l < textLength)
-                    .sort((a, b) => b - a); // Descending order
 
-                // Go through all possible length buckets
-                outer: for (let len of lenSorted) {
-                    for (let key of this._lengthKeyDict[len]) {
-                        if (translatedText.includes(key)) {
-                            translatedText = translatedText.replace(key, this._dict[key]);
-                            count++;
-                            if (count >= times) {
-                                break outer;
-                            }
-                        }
-                    }
+            // try to handle escape sequences and translate only non-escape parts
+            let rawParts = [];
+            let escapeMatches = [];
+            let lastIndex = 0;
+            let m;
+            while ((m = this._escapeRegex.exec(text)) !== null) {
+                if (m.index > lastIndex) {
+                    rawParts.push(text.slice(lastIndex, m.index));
                 }
-
-                if (cache && translatedText !== text) {
-                    // Cache the new translation
-                    this._dict[text] = translatedText;
-                    if (!this._lengthKeyDict[text.length]) {
-                        this._lengthKeyDict[text.length] = [];
-                    }
-                    this._lengthKeyDict[text.length].push(text);
-                    // this._isDictChanged = true;
-                }
-
-                // No matter what, add to translated set to avoid re-processing
-                this._translatedSet.add(translatedText);
-
-                translatedText = detectStartWhitespace ? leadingSpaces + translatedText : translatedText;
+                escapeMatches.push(m[0]);
+                lastIndex = m.index + m[0].length;
             }
-            return translatedText;
+
+            if (lastIndex < text.length) {
+                rawParts.push(text.slice(lastIndex));
+            }
+
+            // Translate each raw part separately
+            let translatedParts = rawParts.map(part => this._translateRecursively(part, times));
+
+            // Reconstruct the full text with escape sequences in place
+            let translatedText = '';
+            let escapeIndex = 0;
+            for (let part of translatedParts) {
+                translatedText += part;
+                if (escapeIndex < escapeMatches.length) {
+                    translatedText += escapeMatches[escapeIndex++];
+                }
+            }
+
+            return detectStartWhitespace ? leadingSpaces + translatedText : translatedText;
         }
     };
 
@@ -243,24 +283,24 @@
     //     }
     // };
 
-     TranslationManager.translateDataMap = function () {
-         if ($dataMap) {
-             if ($dataMap.displayName) {
-                 $dataMap.displayName = TranslationManager.translate($dataMap.displayName);
-             }
-             // if ($dataMap.events) {
-             //     $dataMap.events.forEach(event => {
-             //         if (event && event.pages) {
-             //             event.pages.forEach(page => {
-             //                 if (page.list) {
-             //                     page.list.forEach(TranslationManager.translateEventCommandComment);
-             //                 }
-             //             });
-             //         }
-             //     });
-             // }
-         }
-     };
+    TranslationManager.translateDataMap = function () {
+        if ($dataMap) {
+            if ($dataMap.displayName) {
+                $dataMap.displayName = TranslationManager.translate($dataMap.displayName);
+            }
+            // if ($dataMap.events) {
+            //     $dataMap.events.forEach(event => {
+            //         if (event && event.pages) {
+            //             event.pages.forEach(page => {
+            //                 if (page.list) {
+            //                     page.list.forEach(TranslationManager.translateEventCommandComment);
+            //                 }
+            //             });
+            //         }
+            //     });
+            // }
+        }
+    };
 
     TranslationManager.translateCommonData = function () {
         // Translate map names in $dataMapInfos
@@ -321,6 +361,23 @@
                         $dataSystem.terms.messages[key] = TranslationManager.translate($dataSystem.terms.messages[key]);
                     }
                 }
+            }
+
+            // Also variable and switch names
+            if ($dataSystem.variables) {
+                $dataSystem.variables.forEach((variable, i) => {
+                    if (variable) {
+                        $dataSystem.variables[i] = TranslationManager.translate(variable);
+                    }
+                });
+            }
+            if ($dataSystem.switches) {
+                $dataSystem.switches.forEach((sw, i) => {
+                    if (sw) {
+                        $dataSystem.switches[i] = TranslationManager.translate(sw);
+                    }
+                }
+                );
             }
 
             // Translate game title
@@ -401,26 +458,26 @@
     //#endregion
 
     //#region Patches
-    // // Choices and other command window text
-    // const _Window_Command_addCommand = Window_Command.prototype.addCommand;
-    // Window_Command.prototype.addCommand = function (name, symbol, enabled = true, ext = null) {
-    //     _Window_Command_addCommand.call(this, TranslationManager.translate(name), symbol, enabled, ext);
-    // };
+    // Choices and other command window text
+    const _Window_Command_addCommand = Window_Command.prototype.addCommand;
+    Window_Command.prototype.addCommand = function (name, symbol, enabled = true, ext = null) {
+        _Window_Command_addCommand.call(this, TranslationManager.translate(name), symbol, enabled, ext);
+    };
 
-    // // Message window text
-    // const _Window_Message_startMessage = Window_Message.prototype.startMessage;
-    // Window_Message.prototype.startMessage = function () {
-    //     for (let i = 0; i < $gameMessage._texts.length; i++) {
-    //         $gameMessage._texts[i] = TranslationManager.translate($gameMessage._texts[i]);
-    //     }
-    //     _Window_Message_startMessage.call(this);
-    // };
+    // Message window text
+    const _Window_Message_startMessage = Window_Message.prototype.startMessage;
+    Window_Message.prototype.startMessage = function () {
+        for (let i = 0; i < $gameMessage._texts.length; i++) {
+            $gameMessage._texts[i] = TranslationManager.translate($gameMessage._texts[i]);
+        }
+        _Window_Message_startMessage.call(this);
+    };
 
-    // // Battle log text ??
-    // const _Window_BattleLog_addText = Window_BattleLog.prototype.addText;
-    // Window_BattleLog.prototype.addText = function (text) {
-    //     _Window_BattleLog_addText.call(this, TranslationManager.translate(text));
-    // };
+    // Battle log text ??
+    const _Window_BattleLog_addText = Window_BattleLog.prototype.addText;
+    Window_BattleLog.prototype.addText = function (text) {
+        _Window_BattleLog_addText.call(this, TranslationManager.translate(text));
+    };
 
     // Thanks to the improvement in translate function, this is be acceptable now.
     // Window_Base.drawText is implemented in terms of Bitmap.drawText, so patching Bitmap.drawText should cover most cases.

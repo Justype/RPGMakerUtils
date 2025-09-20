@@ -9,7 +9,7 @@
         xmlns:v="clr-namespace:RPGMakerUtils.Views"
         mc:Ignorable="d"
         FontSize="15" FontFamily="Microsoft YaHei"
-        Title="RPG Maker MV MZ 辅助软件 v2.2.2"
+        Title="RPG Maker MV MZ 辅助软件 v2.3.0"
         DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop"
         AllowDrop="True"
         MinHeight="450" MinWidth="600" Height="450" Width="650">
