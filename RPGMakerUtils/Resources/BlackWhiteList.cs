@@ -105,6 +105,6 @@ namespace RPGMakerUtils.Resources
         /// <summary>
         /// Black list of `System.json` keys that should not be translated.
         /// </summary>
-        public static string[] SystemBlackList { get; } = { "titleBgm" };
+        public static string[] SystemBlackList { get; } = { "titleBgm", "title2Name" };
     }
 }
