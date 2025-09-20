@@ -48,29 +48,19 @@ namespace RPGMakerUtils.Resources
 
             LengthKeyDict = translations.Keys.GroupBy(k => k.Length)
                                              .ToDictionary(g => g.Key, g => g.ToList());
-                                              
+
         }
-
-        /// <summary>
-        /// RPG Maker MV and MZ Dialog Code
-        /// - 101: Show Text
-        /// - 102: Show Choices
-        /// - 401: Text Line (under Show Text)
-        /// - 402: Choice Text
-        /// - 405: Show Scrolling Text or Window
-        /// </summary>
-        public static int[] DialogCode { get; } = { 101, 102, 401, 402, 405 };
-
-        public static int PluginArrayCode { get; } = 356;
-
-        public static int CommentCode { get; } = 108;
-
-        public static int PluginObjectCode { get; } = 357;
 
         /// <summary>
         /// Regex to match escape sequences like \V[1], \N[2], \G, \C[1], \I[45], \{ }, etc. {} can include line breaks.
         /// </summary>
         public static Regex EscapeRegex { get; } = new Regex(@"\\[a-zA-Z0-9_]+\[(?:[^\]\r\n]*)\]|\\\{(?:[^}]*)\}");
+
+        public static Regex VariableOrNumberRegex { get; } = new Regex(@"^([a-zA-Z_][a-zA-Z0-9_]*|\d+(\.\d+)?)$");
+
+        public static Regex LeadingSpacesRegex { get; } = new Regex(@"^\s*");
+
+        public static Regex TrailingSpacesRegex { get; } = new Regex(@"\s*$");
 
         /// <summary>
         /// RPG Maker MV and MZ DataObject Files
@@ -90,13 +80,23 @@ namespace RPGMakerUtils.Resources
         /// <param name="str"></param>
         /// <param name="times"></param>
         /// <returns></returns>
-        private string TranslateStringUsingKeyLength(string str, int times)
+        private string TranslateStringUsingKeyLength(string str, int times, bool directMatch = false)
         {
             if (str == null || str.Length == 0)
                 return str;
 
             if (Translations.ContainsKey(str))
                 return Translations[str];
+
+            string leadingSpaces = LeadingSpacesRegex.Match(str).Value;
+            string trailingSpaces = TrailingSpacesRegex.Match(str).Value;
+            string trimmedStr = str.Trim();
+
+            if (Translations.ContainsKey(trimmedStr))
+                return leadingSpaces + Translations[trimmedStr] + trailingSpaces;
+
+            if (directMatch)
+                return str;
 
             // has line breaks (only \n in the json)
             if (str.Contains('\n'))
@@ -107,15 +107,9 @@ namespace RPGMakerUtils.Resources
                     lines[i] = TranslateStringUsingKeyLength(lines[i], times);
                 }
                 return string.Join("\n", lines);
-            } else
+            }
+            else
             {
-                // try to save leading and trailing spaces and check again
-                string leadingSpaces = Regex.Match(str, @"^\s*").Value;
-                string trailingSpaces = Regex.Match(str, @"\s*$").Value;
-                string trimmedStr = str.Trim();
-                if (Translations.ContainsKey(trimmedStr))
-                    return leadingSpaces + Translations[trimmedStr] + trailingSpaces;
-
                 int count = 0;
 
                 var orderedKeyLengths = LengthKeyDict.Keys.Where(len => len < str.Length)
@@ -142,22 +136,15 @@ namespace RPGMakerUtils.Resources
         /// <param name="str">target string</param>
         /// <param name="translations">translation dict</param>
         /// <returns></returns>
-        private string TranslateString(string str, int times = int.MaxValue)
+        private string TranslateString(string str, int times = int.MaxValue, bool directMatch = false)
         {
             if (str == null || str.Length == 0)
                 return str;
             if (Translations.ContainsKey(str))
                 return Translations[str];
 
-            // try to save leading and trailing spaces and check again
-            string leadingSpaces = Regex.Match(str, @"^\s*").Value;
-            string trailingSpaces = Regex.Match(str, @"\s*$").Value;
-            string trimmedStr = str.Trim();
-            if (Translations.ContainsKey(trimmedStr))
-                return leadingSpaces + Translations[trimmedStr] + trailingSpaces;
-
             // Split the string by the escape sequences, keep the escape sequences to another array
-            var splitsTranslated = EscapeRegex.Split(str).Select(s => TranslateStringUsingKeyLength(s, times)).ToArray();
+            var splitsTranslated = EscapeRegex.Split(str).Select(s => TranslateStringUsingKeyLength(s, times, directMatch)).ToArray();
             var escapes = EscapeRegex.Matches(str).Cast<Match>().Select(m => m.Value).ToArray();
 
             // Reconstruct the string
@@ -206,7 +193,7 @@ namespace RPGMakerUtils.Resources
         /// Translate all string in parameters if code is Plugin Object.
         /// </summary>
         /// <param name="token"></param>
-        private void TranslateRPGMakerPluginObject(JToken token)
+        private void TranslateCommand357(JToken token)
         {
             // Make sure the First pluginToken in `parameters` is in the key of PluginObjectWhiteList
             if (token.Type == JTokenType.Object)
@@ -229,7 +216,7 @@ namespace RPGMakerUtils.Resources
         /// Translate all string in parameters if code is Plugin Array.
         /// </summary>
         /// <param name="token"></param>
-        private void TranslateRPGMakerPluginArray(JToken token)
+        private void TranslateCommand356(JToken token)
         {
             // Make sure the First pluginToken in `parameters` is in the key of PluginArrayWhiteList
             if (token.Type == JTokenType.Object)
@@ -246,17 +233,20 @@ namespace RPGMakerUtils.Resources
                             var itemString = parametersJArray[i].ToString();
 
                             string[] itemArray = itemString.Split(' ');
-                            if (itemArray.Length > 0 && BlackWhiteList.PluginArrayWhiteList.Contains(itemArray[0]))
+                            if (itemArray.Length > 0)
                             {
-                                // Translate the rest of the string after the first element
-                                for (int j = 1; j < itemArray.Length; j++)
+                                if (BlackWhiteList.PluginArrayWhiteList.Contains(itemArray[0]))
                                 {
-                                    // If the string is not a number, translate it
-                                    if (!int.TryParse(itemArray[j], out _))
-                                        itemArray[j] = TranslateString(itemArray[j]);
+                                    // Translate the rest of the string after the first element
+                                    for (int j = 1; j < itemArray.Length; j++)
+                                    {
+                                        // If the string is not a number, translate it
+                                        if (!int.TryParse(itemArray[j], out _))
+                                            itemArray[j] = TranslateString(itemArray[j]);
+                                    }
+                                    // Join the translated parts back into a single string
+                                    parametersJArray[i].Replace(string.Join(" ", itemArray));
                                 }
-                                // Join the translated parts back into a single string
-                                parametersJArray[i].Replace(string.Join(" ", itemArray));
                             }
                         }
                     }
@@ -355,14 +345,27 @@ namespace RPGMakerUtils.Resources
                     if (jobject.ContainsKey("code"))
                     {
                         int code = (int)jobject["code"];
-                        if (DialogCode.Contains(code))
-                            TranslateGameEvents(jobject["parameters"], true);
-                        else if (code == CommentCode)
-                            TranslateGameEvents(jobject["parameters"], true, times: 1);
-                        else if (code == PluginObjectCode)
-                            TranslateRPGMakerPluginObject(jobject);
-                        else if (code == PluginArrayCode)
-                            TranslateRPGMakerPluginArray(jobject);
+                        switch (code)
+                        {
+                            // case 101: // - 101: Use for both showing text and setting face image, background, position
+                            case 102: // - 102: Show Choices
+                            case 401: // - 401: Text Line (under Show Text)
+                            case 402: // - 402: Choice Text
+                            case 405: // - 405: Show Scrolling Text or Window
+                                TranslateGameEvents(jobject["parameters"], true, times: times);
+                                break;
+                            case 108: // Comment
+                                TranslateGameEvents(jobject["parameters"], true, times: 1);
+                                break;
+                            case 356:
+                                TranslateCommand356(jobject);
+                                break;
+                            case 357:
+                                TranslateCommand357(jobject);
+                                break;
+                            default:
+                                break;
+                        }
                     }
                     else if (jobject.ContainsKey("displayName"))
                         TranslateGameEvents(jobject["displayName"], true);
@@ -381,7 +384,7 @@ namespace RPGMakerUtils.Resources
                     break;
                 case JTokenType.String:
                     if (isCodeChildren)
-                        token.Replace(TranslateString(token.ToString(), times));
+                        token.Replace(TranslateString(token.ToString(), times: times));
                     break;
                 default:
                     break;
@@ -458,6 +461,78 @@ namespace RPGMakerUtils.Resources
                 case JTokenType.String:
                     if (is_noun)
                         token.Replace(TranslateString(token.ToString()));
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Recursively translates JSON tokens, including nested objects, arrays, and strings,  replacing fully matched
+        /// strings with their translated equivalents.
+        /// </summary>
+        /// <remarks>
+        /// - For JSON objects, the method processes each property value recursively. <br/>
+        /// - For JSON arrays, the method processes each item recursively. <br/>
+        /// - For JSON strings, the method attempts to parse the string as a JSON object or array. If parsing succeeds, 
+        /// the parsed token is translated recursively. If parsing fails, the string is translated directly. <br/>
+        /// - The method modifies the input <paramref name="token"/> in place, replacing its content with the translated result.</remarks>
+        /// <param name="token">The <see cref="JToken"/> to translate. This can be a JSON object, array, or string.</param>
+        public void TranslateExactJTokenRecursively(JToken token, bool tryParseJson = false)
+        {
+            switch (token.Type)
+            {
+                case JTokenType.Object:
+                    var jobject = token as JObject;
+                    var properties = jobject.Children<JProperty>().ToList();
+                    for (int i = 0; i < properties.Count; i++)
+                        TranslateExactJTokenRecursively(properties[i].Value, tryParseJson);
+                    break;
+                case JTokenType.Array:
+                    var items = token.Children().ToList();
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        var item = items[i];
+                        TranslateExactJTokenRecursively(item, tryParseJson);
+                    }
+                    break;
+                case JTokenType.String:
+                    // Try to parse the string as JSON array or object
+                    var str = token.ToString();
+                    if (tryParseJson)
+                    {
+                        if (str.Length > 1 &&
+                            ((str.StartsWith("'") && str.EndsWith("'")) ||
+                             (str.StartsWith("\"") && str.EndsWith("\""))))
+                        {
+                            string innerStr = str.Substring(1, str.Length - 2);
+                            string translatedInnerStr = TranslateString(innerStr, directMatch: true);
+                            token.Replace($"'{translatedInnerStr}'");
+                            return;
+                        }
+
+                        JToken parsedToken;
+                        try
+                        {
+                            parsedToken = JToken.Parse(str);
+                            // If parsing is successful, recursively translate the parsed token
+                            TranslateExactJTokenRecursively(parsedToken, tryParseJson);
+                            // Replace the original string with the translated JSON string
+                            token.Replace(parsedToken.ToString(Formatting.None));
+                            return;
+                        }
+                        catch (JsonReaderException)
+                        {
+                            // If parsing fails, it means the string is not a valid JSON structure
+                            // Proceed to translate it as a regular string
+                            token.Replace(TranslateString(token.ToString(), directMatch: true));
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        token.Replace(TranslateString(token.ToString(), directMatch: true));
+                    }
                     break;
                 default:
                     break;
