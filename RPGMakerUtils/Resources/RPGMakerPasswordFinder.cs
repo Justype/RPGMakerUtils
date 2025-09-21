@@ -66,11 +66,17 @@ namespace RPGMakerUtils.Resources
                         if (command["code"].ToObject<int>() == 103 && i + 1 < list.Count())
                         {
                             JObject nextCommand = list[i + 1] as JObject;
-                            if (nextCommand != null && nextCommand.ContainsKey("code") && nextCommand["code"].ToObject<int>() == 111)
+                            // Code 111 is "Input Password" (search next 5 commands for code 111)
+                            for (int j = 1; j <= 5 && (i + j) < list.Count(); j++)
                             {
-                                // The 4th parameter is the password
-                                string password = nextCommand["parameters"][3].ToString();
-                                passwords.Add((password, GetLastDialogs(list, i)));
+                                nextCommand = list[i + j] as JObject;
+                                if (nextCommand != null && nextCommand.ContainsKey("code") && nextCommand["code"].ToObject<int>() == 111)
+                                {
+                                    string password = nextCommand["parameters"][3].ToString();
+                                    passwords.Add((password, GetLastDialogs(list, i)));
+                                    break;
+                                }
+                                nextCommand = null;
                             }
                         }
                     }

@@ -103,10 +103,16 @@ namespace RPGMakerUtils.Resources
             } },
         };
 
-        /// <summary>
-        /// Black list of `System.json` keys that should not be translated.
-        /// </summary>
-        public static string[] SystemBlackList { get; } = { "titleBgm", "title2Name" };
+        // /// <summary>
+        // /// Black list of `System.json` keys that should not be translated.
+        // /// </summary>
+        // public static string[] SystemBlackList { get; } = { "titleBgm", "title2Name" };
+
+        public static string[] SystemWhiteList { get; } = {
+            "armorTypes", "currencyUnit", "elements", "equipTypes", "gameTitle",
+            "skillTypes", "switches", "variables", "weaponTypes",
+            "terms", // "basic", "commands", "params", "messages",
+        };
 
         public static Regex SystemRegex { get; } = new Regex(@"bgm", RegexOptions.Compiled & RegexOptions.IgnoreCase);
     }
