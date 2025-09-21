@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PropertyChanged;
 using RPGMakerUtils.Messages;
 using RPGMakerUtils.Models;
@@ -152,55 +154,110 @@ namespace RPGMakerUtils.ViewModels
 
             await Task.Run(async () =>
             {
-                // Update plugins.js to include JtJsonTranslationManager.js
-                if (File.Exists(GamePluginsJsPath))
+                if (!File.Exists(GamePluginsJsPath))
+                    return;
+
+                // === Step 1: 备份文件 ===
+                string backupPath = GamePluginsJsPath + ".bak";
+                File.Copy(GamePluginsJsPath, backupPath, true); // 覆盖已存在的备份
+
+                // === Step 2: 读取整个文件内容 ===
+                string content = File.ReadAllText(GamePluginsJsPath);
+
+                // === Step 3: 检查是否已添加插件 ===
+                if (content.Contains("JtJsonTranslationManager"))
                 {
-                    // Add the line to the first entry
-                    List<string> lines = File.ReadAllLines(GamePluginsJsPath)
-                                         .Select(line => line.Trim())
-                                         .ToList();
-
-                    // Make sure the plugin is not already added
-                    if (lines.Any(line => line.Contains("JtJsonTranslationManager")))
-                        return; // Already added
-
-                    // Replace the incomplete line with a valid assignment for firstPluginIndex
-                    Regex pluginRegex = new Regex(@"^\s*\{\s*""name""\s*:\s*""[^""]+""\s*,\s*""status""\s*:\s*(true|false)\s*,\s*""description""\s*:\s*""[^""]*""\s*,\s*""parameters""\s*:\s*\{[^}]*\}\s*\}\s*,?\s*$");
-                    int firstPluginIndex = lines.FindIndex(line => pluginRegex.IsMatch(line));
-                    if (firstPluginIndex == -1)
-                    {
-                        MessageBox.Show("无法找到plugins.js中的插件列表。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-
-                    lines.Insert(firstPluginIndex, PluginLine);
-                    File.WriteAllText(GamePluginsJsPath, string.Join("\n", lines)); // Use \n to keep the original line endings
-
+                    MessageBox.Show("插件 JtJsonTranslationManager 已存在。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
                 }
 
-                // Copy Resources/JtJsonTranslationManager.js to TranslationPluginPath
-                await Utils.CopyEmbeddedFileAsync($"RPGMakerUtils.Resources.{SelectedPluginVersion}", TranslationPluginPath);
-
-                // Copy TranslateJsonPath to GameWwwPath/translations.json using JSON parser
-                if (!string.IsNullOrWhiteSpace(TranslateJsonPath) && File.Exists(TranslateJsonPath))
+                // === Step 4: 提取 $plugins 数组部分 ===
+                int startIndex = content.IndexOf("var $plugins =");
+                if (startIndex == -1)
                 {
-                    var destPath = Path.Combine(GameWwwPath, "translations.json");
-                    try
+                    MessageBox.Show("未找到 'var $plugins =' 声明。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // 找到 = 后的第一个 [ 和匹配的 ]
+                int arrayStart = content.IndexOf('[', startIndex);
+                if (arrayStart == -1)
+                {
+                    MessageBox.Show("未找到插件数组起始 '['。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // 手动匹配括号层级，找到对应的 ]
+                int bracketCount = 0;
+                int arrayEnd = -1;
+                for (int i = arrayStart; i < content.Length; i++)
+                {
+                    if (content[i] == '[') bracketCount++;
+                    else if (content[i] == ']') bracketCount--;
+
+                    if (bracketCount == 0)
                     {
-                        var jsonText = File.ReadAllText(TranslateJsonPath);
-                        // Parse and re-serialize to remove comments and ensure valid JSON (JSON should not have comments)
-                        var jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject<object>(jsonText);
-                        var cleanedJson = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
-                        File.WriteAllText(destPath, cleanedJson);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("JSON解析失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
+                        arrayEnd = i;
+                        break;
                     }
                 }
 
-                MessageBox.Show("已成功添加翻译插件和翻译文件。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (arrayEnd == -1)
+                {
+                    MessageBox.Show("插件数组括号不匹配。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // === Step 5: 提取数组字符串并解析 ===
+                string arrayString = content.Substring(arrayStart, arrayEnd - arrayStart + 1);
+
+                try
+                {
+                    JArray plugins = JArray.Parse(arrayString);
+
+                    // === Step 6: 插入新插件（作为第一个元素） ===
+                    JObject newPlugin = JObject.Parse(PluginLine.TrimEnd(',')); // 移除末尾逗号，避免多余逗号
+                    plugins.Insert(0, newPlugin);
+
+                    // === Step 7: 重新构建文件内容 ===
+                    string newArrayString = plugins.ToString(Formatting.None); // 不要缩进，保持原风格或后续统一格式
+                                                                               // 如果你希望美化，可以用 Formatting.Indented
+
+                    string newContent = content.Substring(0, arrayStart) +
+                                        newArrayString +
+                                        content.Substring(arrayEnd + 1);
+
+                    // === Step 8: 写回文件 ===
+                    File.WriteAllText(GamePluginsJsPath, newContent);
+
+                    // === Step 9: 复制插件文件 ===
+                    await Utils.CopyEmbeddedFileAsync($"RPGMakerUtils.Resources.{SelectedPluginVersion}", TranslationPluginPath);
+
+                    // === Step 10: 处理 translations.json ===
+                    if (!string.IsNullOrWhiteSpace(TranslateJsonPath) && File.Exists(TranslateJsonPath))
+                    {
+                        var destPath = Path.Combine(GameWwwPath, "translations.json");
+                        try
+                        {
+                            var jsonText = File.ReadAllText(TranslateJsonPath);
+                            var jsonObj = JsonConvert.DeserializeObject<object>(jsonText);
+                            var cleanedJson = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                            File.WriteAllText(destPath, cleanedJson);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("JSON解析失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
+                    }
+
+                    MessageBox.Show("已成功添加翻译插件和翻译文件。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (JsonException ex)
+                {
+                    MessageBox.Show("插件数组 JSON 解析失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
             });
 
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
@@ -208,12 +265,21 @@ namespace RPGMakerUtils.ViewModels
 
         private bool CanRestore()
         {
-            return !IsRunning
-                && !string.IsNullOrWhiteSpace(GamePath)
-                && (GameVersion == RPGMakerVersion.MV || GameVersion == RPGMakerVersion.MZ)
-                && !string.IsNullOrWhiteSpace(GamePluginsJsPath)
-                && File.Exists(GamePluginsJsPath)
-                && File.ReadAllText(GamePluginsJsPath).Contains("JtJsonTranslationManager");
+            if (IsRunning || string.IsNullOrWhiteSpace(GamePath))
+                return false;
+
+            if (GameVersion != RPGMakerVersion.MV && GameVersion != RPGMakerVersion.MZ)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(GamePluginsJsPath))
+                return false;
+
+            // 只要有备份文件，或者当前文件包含插件，就允许恢复
+            string bakPath = GamePluginsJsPath + ".bak";
+            return File.Exists(GamePluginsJsPath) && (
+                File.Exists(bakPath) ||
+                File.ReadAllText(GamePluginsJsPath).Contains("JtJsonTranslationManager")
+            );
         }
 
         private async Task RestoreAsync()
@@ -228,17 +294,42 @@ namespace RPGMakerUtils.ViewModels
 
             await Task.Run(() =>
             {
-                // Remove the plugin line from plugins.js
-                if (File.Exists(GamePluginsJsPath))
+                string bakPath = GamePluginsJsPath + ".bak";
+
+                if (File.Exists(bakPath))
                 {
-                    List<string> lines = File.ReadAllLines(GamePluginsJsPath)
-                                         .Select(line => line.Trim())
-                                         .ToList();
-                    lines = lines.Where(line => !line.Contains("JtJsonTranslationManager")).ToList();
-                    File.WriteAllText(GamePluginsJsPath, string.Join("\n", lines)); // Use \n to keep the original line endings
+                    // 优先从备份恢复
+                    try
+                    {
+                        File.Copy(bakPath, GamePluginsJsPath, true); // 覆盖当前文件
+                    }
+                    catch (Exception ex)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            MessageBox.Show($"从备份恢复失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                        });
+                        return;
+                    }
+                }
+                else
+                {
+                    // 没有备份 → 引导用户手动操作
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        MessageBox.Show(
+                            "未找到备份文件（plugins.js.bak）。\n" +
+                            "为确保安全，程序不会自动修改当前文件。\n" +
+                            "请手动从 plugins.js 中删除包含 \"JtJsonTranslationManager\" 的插件对象。",
+                            "需要手动操作",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning
+                        );
+                    });
+                    return; // 不再继续删除其他文件
                 }
 
-                // Delete JtJsonTranslationManager.js
+                // 删除插件文件（无论是否从备份恢复，只要执行到这一步就删）
                 if (File.Exists(TranslationPluginPath))
                 {
                     try
@@ -255,7 +346,7 @@ namespace RPGMakerUtils.ViewModels
                     }
                 }
 
-                // Delete translations.json
+                // 删除翻译文件
                 if (File.Exists(TargetJsonPath))
                 {
                     try
@@ -272,7 +363,10 @@ namespace RPGMakerUtils.ViewModels
                     }
                 }
 
-                MessageBox.Show("已成功恢复到未添加翻译插件的状态。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show("已成功恢复到未添加翻译插件的状态。", "成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                });
             });
 
             WeakReferenceMessenger.Default.Send(new ProgramRunningMessage(false));
