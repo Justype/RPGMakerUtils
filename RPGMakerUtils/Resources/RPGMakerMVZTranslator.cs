@@ -603,11 +603,7 @@ namespace RPGMakerUtils.Resources
                     // If the key is name, do not translate it.
                     var keys = jobject.Properties().Select(p => p.Name).ToList();
                     foreach (var key in keys)
-                    {
-                        if (key == "name") // Do not translate the name key
-                            continue;
                         TranslateExactJTokenRecursively(jobject[key], tryParseJson);
-                    }
                     break;
                 case JTokenType.Array:
                     var items = token.Children().ToList();
@@ -782,8 +778,11 @@ namespace RPGMakerUtils.Resources
                     }
                     else if (UnsafeMode)
                     {
-                        // If the plugin is not in the whitelist, translate all string values fully matched
-                        TranslateExactJTokenRecursively(pluginJObject, tryParseJson: true);
+                        // Do not translate the name of the plugin
+                        if (pluginJObject.ContainsKey("description"))
+                            TranslateExactJTokenRecursively(pluginJObject["description"], tryParseJson: true);
+                        if (pluginJObject.ContainsKey("parameters"))
+                            TranslateExactJTokenRecursively(pluginJObject["parameters"], tryParseJson: true);
                     }
                 }
 

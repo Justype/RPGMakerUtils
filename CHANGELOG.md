@@ -1,5 +1,11 @@
 # Version History
 
+## Version 2.3.2 RPG Maker Utils
+
+- 感谢 @Yricky 提供的修改 #12 ，现在能更好地加入翻译插件了
+- 修复了如果`plugins.js`的`parameters`中有键为`name`时，不会被翻译的BUG
+- 去除了复制密码到剪贴板的功能
+
 ## Version 2.3.1 RPG Maker Utils
 
 - 修复了翻译`plugins.js`时，会把插件名字翻译掉的BUG
