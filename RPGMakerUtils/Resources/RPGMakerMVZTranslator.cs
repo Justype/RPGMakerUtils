@@ -460,16 +460,22 @@ namespace RPGMakerUtils.Resources
                                 if (jobject.ContainsKey("parameters") && jobject["parameters"] is JArray parametersArray && parametersArray.Count > 0)
                                 {
                                     string comment = parametersArray[0].ToString();
-                                    ObjectNoteRegex.Replace(comment, match =>
+                                    if (ObjectNoteRegex.IsMatch(comment))
                                     {
-                                        string tag = match.Groups[1].Value;     // tag name
-                                        string content = match.Groups[2].Value; // text inside the tag
-                                        string translatedContent = TranslateString(content);
-                                        return $"<{tag}:{translatedContent}>";
-                                    });
-                                    parametersArray[0].Replace(comment);
+                                        ObjectNoteRegex.Replace(comment, match =>
+                                        {
+                                            string tag = match.Groups[1].Value;     // tag name
+                                            string content = match.Groups[2].Value; // text inside the tag
+                                            string translatedContent = TranslateString(content);
+                                            return $"<{tag}:{translatedContent}>";
+                                        });
+                                        parametersArray[0].Replace(comment);
+                                    }
+                                    else
+                                    {
+                                        TranslateGameEvents(jobject["parameters"], true, times: 1);
+                                    }
                                 }
-                                TranslateGameEvents(jobject["parameters"], true, times: 1);
                                 break;
                             case 122:
                                 TranslateCommand122(jobject);
@@ -594,9 +600,14 @@ namespace RPGMakerUtils.Resources
             {
                 case JTokenType.Object:
                     var jobject = token as JObject;
-                    var properties = jobject.Children<JProperty>().ToList();
-                    for (int i = 0; i < properties.Count; i++)
-                        TranslateExactJTokenRecursively(properties[i].Value, tryParseJson);
+                    // If the key is name, do not translate it.
+                    var keys = jobject.Properties().Select(p => p.Name).ToList();
+                    foreach (var key in keys)
+                    {
+                        if (key == "name") // Do not translate the name key
+                            continue;
+                        TranslateExactJTokenRecursively(jobject[key], tryParseJson);
+                    }
                     break;
                 case JTokenType.Array:
                     var items = token.Children().ToList();

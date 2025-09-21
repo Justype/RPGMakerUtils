@@ -1,5 +1,10 @@
 # Version History
 
+## Version 2.3.1 RPG Maker Utils
+
+- 修复了翻译`plugins.js`时，会把插件名字翻译掉的BUG
+- 修复了翻译`108`时，可能会重复翻译的BUG
+
 ## Version 2.3.0 RPG Maker Utils
 
 - 替换翻译
