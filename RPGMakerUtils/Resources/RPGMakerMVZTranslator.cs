@@ -62,6 +62,17 @@ namespace RPGMakerUtils.Resources
 
         public static Regex ObjectNoteRegex { get; } = new Regex(@"<([^<>:]+):([^<>]*)>", RegexOptions.Compiled | RegexOptions.Singleline);
 
+        public static Regex CommonPluginValueRegex { get; } = new Regex(@"^(?:
+            [\d,.]+| # match numbers and commas
+            # common CSS color names
+            white|black|red|blue|green|yellow|purple|cyan|magenta|gray|grey|orange|brown|pink|lime|
+            navy|teal|olive|maroon|silver|gold|
+            rgba?\([^\)]*\)|hsla?\([^\)]*\)|       # color functions
+            \#[0-9a-fA-F]{3,6,8}|                  # hex colors
+            true|false|null|undefined|NaN|Infinity| # JavaScript literals
+            top|bottom|left|right|center|justify|inherit|initial|unset # CSS literals
+        )$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
         public static Regex LeadingSpacesRegex { get; } = new Regex(@"^(\\n)*[ 　]*", RegexOptions.Compiled);
 
         public static Regex TrailingSpacesRegex { get; } = new Regex(@"[ 　:：]*(\\n)*$", RegexOptions.Compiled);
@@ -446,6 +457,18 @@ namespace RPGMakerUtils.Resources
                                 TranslateGameEvents(jobject["parameters"], true, times: times);
                                 break;
                             case 108: // Comment
+                                if (jobject.ContainsKey("parameters") && jobject["parameters"] is JArray parametersArray && parametersArray.Count > 0)
+                                {
+                                    string comment = parametersArray[0].ToString();
+                                    ObjectNoteRegex.Replace(comment, match =>
+                                    {
+                                        string tag = match.Groups[1].Value;     // tag name
+                                        string content = match.Groups[2].Value; // text inside the tag
+                                        string translatedContent = TranslateString(content);
+                                        return $"<{tag}:{translatedContent}>";
+                                    });
+                                    parametersArray[0].Replace(comment);
+                                }
                                 TranslateGameEvents(jobject["parameters"], true, times: 1);
                                 break;
                             case 122:
@@ -510,43 +533,14 @@ namespace RPGMakerUtils.Resources
                         if (jobject["note"].Type == JTokenType.String)
                         {
                             string noteContent = jobject["note"].ToString();
-                            if (UnsafeMode)
-                            {
-                                noteContent = ObjectNoteRegex.Replace(noteContent, match =>
-                                {
-                                    string tag = match.Groups[1].Value;       // tag name
-                                    string content = match.Groups[2].Value; // text inside the tag
-                                    string translatedContent = TranslateString(content);
-                                    return $"<{tag}:{translatedContent}>";
-                                });
-                            }
-                            else
-                            {
-                                #region SG Note Translation
-                                // Translate <SG説明:xxxx> to <SG説明:translated>
-                                noteContent = Regex.Replace(
-                                    noteContent,
-                                    @"<SG説明(\d*)\:(.*?)>",
-                                    match =>
-                                    {
-                                        string number = match.Groups[1].Value;       // may be empty if no number
-                                        string originalText = match.Groups[2].Value; // text inside the tag
-                                        string translatedText = TranslateString(originalText);
-                                        return $"<SG説明{number}:{translatedText}>";
-                                    },
-                                    RegexOptions.Singleline
-                                );
 
-
-                                // Translate <SGカテゴリ:xxxx> to <SGカテゴリ:translated>
-                                noteContent = Regex.Replace(noteContent, @"<SGカテゴリ:(.*?)>", match =>
-                                {
-                                    string originalText = match.Groups[1].Value;
-                                    string translatedText = TranslateString(originalText);
-                                    return $"<SGカテゴリ:{translatedText}>";
-                                }, RegexOptions.Singleline);
-                                #endregion
-                            }
+                            noteContent = ObjectNoteRegex.Replace(noteContent, match =>
+                            {
+                                string tag = match.Groups[1].Value;       // tag name
+                                string content = match.Groups[2].Value; // text inside the tag
+                                string translatedContent = TranslateString(content);
+                                return $"<{tag}:{translatedContent}>";
+                            });
 
                             jobject["note"].Replace(noteContent);
                         }
@@ -613,8 +607,11 @@ namespace RPGMakerUtils.Resources
                     }
                     break;
                 case JTokenType.String:
-                    // Try to parse the string as JSON array or object
                     var str = token.ToString();
+                    if (CommonPluginValueRegex.IsMatch(str))
+                        return;
+
+                    // Try to parse the string as JSON array or object
                     if (tryParseJson)
                     {
                         if (str.Length > 1)
@@ -630,6 +627,9 @@ namespace RPGMakerUtils.Resources
                             else
                             {
                                 JToken parsedToken;
+                                if ((str.StartsWith("[") && str.EndsWith("]")) ||
+                                    (str.StartsWith("{") && str.EndsWith("}")))
+                                {
                                     try
                                     {
                                         parsedToken = JToken.Parse(str);
@@ -647,6 +647,12 @@ namespace RPGMakerUtils.Resources
                                         return;
                                     }
                                 }
+                                else
+                                {
+                                    token.Replace(TranslateString(token.ToString(), directMatch: true));
+                                    return;
+                                }
+                            }
                         }
                     }
                     else
