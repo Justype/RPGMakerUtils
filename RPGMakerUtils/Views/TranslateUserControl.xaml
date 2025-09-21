@@ -34,7 +34,7 @@
                 <Bold>翻译文件：</Bold>
                 <Run Text="{Binding TranslateJsonPath, Converter={StaticResource FileNameConverter}}"/>
             </TextBlock>
-            <CheckBox Content="不安全模式（如果报错可以取消，如果还报错，请提交Issue）" IsChecked="{Binding IsUnsafeMode}" VerticalContentAlignment="Center"/>
+            <CheckBox Content="大范围模式（如果报错可以取消，如果还报错，请提交Issue）" IsChecked="{Binding IsUnsafeMode}" VerticalContentAlignment="Center"/>
         </StackPanel>
 
         <Button Grid.Column="1" Content="翻译所有文件" Command="{Binding TranslateCommand}" Margin="0,0,5,0"/>

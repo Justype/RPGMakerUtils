@@ -2,7 +2,7 @@
 
 本版本使用 .NET Framework 4.8 编写，支持 RPG Maker MV 和 RPG Maker MZ 的游戏。
 
-有可能会被杀毒软件误报为病毒，请自行判断是否下载使用。
+2.2.1 以及之前的版本有可能会被杀毒软件误报为病毒，请自行判断是否下载使用。
 
 ## 功能
 
@@ -12,7 +12,7 @@
       2. `Broader` 更全面的翻译，速度较慢 （推荐，但在JoiPlay里面可能会出现插件菜单未翻译的情况）
    2. 替换翻译：根据json文件，修改 `data/*json` 文件 和 `js/plugins.js` 文件
       1. 普通模式，会按白名单翻译`plugins.js`和`command356` `command357`
-      2. 不安全模式，不在白名单的，且在json中的，直接翻译
+      2. 大范围模式，不在白名单的，且在json中的，直接翻译 （如果运行出错，请使用普通模式；如果想，可以提交Issue）
 2. 修改字体 （复制系统字体到 www/Fonts，并修改CSS）
 3. 添加作弊，使用的是 [paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin) 的代码
 4. 找游戏的宝箱密码
@@ -112,7 +112,7 @@ RPG Maker 的相关方法：
     - 使用白名单进行翻译
     - 如果值在字典中，直接替换
   - 赋值 `code`: `122`
-    -  如果 且 `parameters[4]` 是简单的字符串 `'xxxxx'` 并且 值在字典中，直接替换
+    - 只有当 `parameters[3] == 4` 且 `parameters[4]` 是简单的字符串 `'xxxxx'` 并且 值在字典中，才翻译
 - `js/plugins.js`
   - 通过白名单进行翻译
   - 如果值在字典中，直接替换
