@@ -177,8 +177,8 @@ namespace RPGMakerUtils.ViewModels
                 try
                 {
                     // === Step 3: 使用正则表达式提取插件数组 ===
-                    string pattern = @"var \$plugins\s*=\s*(?s)(?<json>\[.*\]);?";
-                    Match match = Regex.Match(content, pattern, RegexOptions.Singleline);
+                    Regex pluginRegex = new Regex(@"var\s*\$plugins\s*=\s*(?s)(?<json>\[.*\]);?", RegexOptions.Singleline);
+                    Match match = pluginRegex.Match(content);
                     if (!match.Success)
                     {
                         MessageBox.Show("无法在 plugins.js 中找到插件数组", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -195,7 +195,7 @@ namespace RPGMakerUtils.ViewModels
 
                     // === Step 6: 重新构建文件内容 ===
                     string newArrayString = plugins.ToString(Formatting.None);
-                    string newContent = Regex.Replace(content, pattern, $"var $plugins = {newArrayString};", RegexOptions.Singleline);
+                    string newContent = pluginRegex.Replace(content, $"var $plugins = {newArrayString};");
 
                     // === Step 7: 写回文件 ===
                     File.WriteAllText(GamePluginsJsPath, newContent);

@@ -26,6 +26,8 @@
             <LineBreak/>
             - 如果使用替换翻译时，遇到了没有翻译的，建议使用翻译插件。
             <LineBreak/>
+            <Run Text="求求了，Windows Defender，能别再杀我的软件了好吗？要改吐了。" FontWeight="Bold"/>
+            <LineBreak/>
             <Run Text="感谢使用与支持！" FontSize="18" FontWeight="Bold"/>
         </TextBlock>
     </Grid>
