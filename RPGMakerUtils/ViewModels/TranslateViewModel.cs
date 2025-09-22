@@ -163,7 +163,7 @@ namespace RPGMakerUtils.ViewModels
          && File.Exists(TranslateJsonPath)
          && !File.Exists(GameDataBackupZipPath)
          && File.Exists(GamePluginsJsPath)
-         && !File.ReadAllText(GamePluginsJsPath).Contains("JtJsonTranslationManager") // Prevent double translation
+         && !File.Exists(GamePluginsJsBackupPath) // Prevent double translation
          && !IsRunning;
 
         public async Task RestoreAsync()
