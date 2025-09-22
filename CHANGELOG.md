@@ -1,5 +1,10 @@
 # Version History
 
+## Version 2.3.3 RPG Maker Utils
+
+- 修改了插件备份逻辑，防止被杀毒软件误报
+- 修改了`plugins.js`的解析逻辑，使用正则表达式解析
+
 ## Version 2.3.2 RPG Maker Utils
 
 - 感谢 @Yricky 提供的修改 #12 ，现在能更好地加入翻译插件了
