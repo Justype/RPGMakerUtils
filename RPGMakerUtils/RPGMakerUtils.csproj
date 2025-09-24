@@ -170,6 +170,7 @@
     <Compile Include="Models\TranslateTarget.cs" />
     <Compile Include="Resources\BlackWhiteList.cs" />
     <Compile Include="Resources\FileIOUtils.cs" />
+    <Compile Include="Resources\RegexUtils.cs" />
     <Compile Include="Resources\RPGMakerMVZTranslator.cs" />
     <Compile Include="Resources\RPGMakerPasswordFinder.cs" />
     <Compile Include="Resources\Utils.cs" />

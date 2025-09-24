@@ -153,6 +153,43 @@ namespace RPGMakerUtils.ViewModels
                 && !File.Exists(GamePluginsJsBackupPath); // Make sure it is not translated
         }
 
+        private void SplitDictKeyValueByRegex(Dictionary<string, string> dict, string key, Regex regex, int minLength = 0)
+        {
+            if (!dict.ContainsKey(key))
+                return;
+            string value = dict[key];
+            if (regex.IsMatch(key) && regex.IsMatch(value))
+            {
+                var keyParts = regex.Split(key);
+                var valueParts = regex.Split(value);
+                if (keyParts.Length == valueParts.Length && keyParts.Length > 1)
+                {
+                    for (int i = 0; i < keyParts.Length; i++)
+                    {
+                        if (!string.IsNullOrWhiteSpace(keyParts[i]) && !string.IsNullOrWhiteSpace(valueParts[i]))
+                        {
+                            //if (keyParts[i].Length >= minLength && !dict.ContainsKey(keyParts[i]))
+                            if (keyParts[i].Length >= minLength)
+                                dict[keyParts[i]] = valueParts[i];
+                        }
+                    }
+                }
+            }
+        }
+
+        private void PreprocessJsonDictionary(Dictionary<string, string> dict)
+        {
+            string[] keys = dict.Keys.ToArray();
+            foreach (var key in keys)
+                SplitDictKeyValueByRegex(dict, key, RegexUtils.PersonNameRegex);
+            keys = dict.Keys.ToArray();
+            foreach (var key in keys)
+                SplitDictKeyValueByRegex(dict, key, RegexUtils.EscapeRegex);
+            keys = dict.Keys.ToArray();
+            foreach (var key in keys)
+                SplitDictKeyValueByRegex(dict, key, RegexUtils.LineBreakRegex, 3);
+        }
+
         private async Task AddTranslationPluginAsync()
         {
             if (!CanAddTranslationPlugin())
@@ -211,13 +248,19 @@ namespace RPGMakerUtils.ViewModels
                         {
                             var jsonText = File.ReadAllText(TranslateJsonPath);
                             // Parse and re-serialize to remove comments and ensure valid JSON (JSON should not have comments)
-                            var jsonObj = JsonConvert.DeserializeObject<object>(jsonText);
+                            var jsonObj = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonText);
+                            if (jsonObj == null)
+                            {
+                                MessageBox.Show("JSON解析失败: 内容为空", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                                return;
+                            }
+                            PreprocessJsonDictionary(jsonObj);
                             var cleanedJson = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
                             File.WriteAllText(destPath, cleanedJson);
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show("JSON解析失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                            MessageBox.Show("JSON解析失败: 请确保它是一个字典" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                             return;
                         }
                     }
