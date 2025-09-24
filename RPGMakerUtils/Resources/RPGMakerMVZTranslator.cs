@@ -52,32 +52,6 @@ namespace RPGMakerUtils.Resources
         }
 
         /// <summary>
-        /// Regex to match escape sequences like \V[1], \N[2], \G, \C[1], \I[45], \{ }, etc. {} can include line breaks.
-        /// </summary>
-        public static Regex EscapeRegex { get; } = new Regex(@"\\[a-zA-Z0-9_]+\[(?:[^\]\r\n]*)\]|\\\{(?:[^}]*)\}", RegexOptions.Compiled);
-
-        public static Regex VariableOrNumberRegex { get; } = new Regex(@"^([a-zA-Z_][a-zA-Z0-9_]*|\d+(\.\d+)?)$", RegexOptions.Compiled);
-
-        public static Regex PersonNameRegex { get; } = new Regex(@"<([^<>]+)>", RegexOptions.Compiled | RegexOptions.Singleline);
-
-        public static Regex ObjectNoteRegex { get; } = new Regex(@"<([^<>:]+):([^<>]*)>", RegexOptions.Compiled | RegexOptions.Singleline);
-
-        public static Regex CommonPluginValueRegex { get; } = new Regex(@"^(?:
-            [\d,.]+| # match numbers and commas
-            # common CSS color names
-            white|black|red|blue|green|yellow|purple|cyan|magenta|gray|grey|orange|brown|pink|lime|
-            navy|teal|olive|maroon|silver|gold|
-            rgba?\([^\)]*\)|hsla?\([^\)]*\)|       # color functions
-            \#[0-9a-fA-F]{3,6,8}|                  # hex colors
-            true|false|null|undefined|NaN|Infinity| # JavaScript literals
-            top|bottom|left|right|center|justify|inherit|initial|unset # CSS literals
-        )$", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-
-        public static Regex LeadingSpacesRegex { get; } = new Regex(@"^(\\n)*[ 　]*", RegexOptions.Compiled);
-
-        public static Regex TrailingSpacesRegex { get; } = new Regex(@"[ 　:：]*(\\n)*$", RegexOptions.Compiled);
-
-        /// <summary>
         /// RPG Maker MV and MZ DataObject Files
         /// </summary>
         public static string[] DataObjectFiles { get; } = {
@@ -119,9 +93,9 @@ namespace RPGMakerUtils.Resources
             }
 
             // Preserve leading/trailing spaces
-            var leadingSpaces = LeadingSpacesRegex.Match(str).Value;
-            var trailingSpaces = TrailingSpacesRegex.Match(str).Value;
-            var trimmedStr = TrailingSpacesRegex.Replace(LeadingSpacesRegex.Replace(str, ""), "");
+            var leadingSpaces = RegexUtils.LeadingSpacesRegex.Match(str).Value;
+            var trailingSpaces = RegexUtils.TrailingSpacesRegex.Match(str).Value;
+            var trimmedStr = RegexUtils.TrailingSpacesRegex.Replace(RegexUtils.LeadingSpacesRegex.Replace(str, ""), "");
 
             // Try translating trimmed string
             string trimmedTranslation;
@@ -133,7 +107,7 @@ namespace RPGMakerUtils.Resources
                 return str;
 
             // Handle person name pattern: e.g., "<name>text"
-            var parts = PersonNameRegex.Split(str);
+            var parts = RegexUtils.PersonNameRegex.Split(str);
             if (parts.Length == 3)
             {
                 var personName = parts[1];
@@ -182,8 +156,8 @@ namespace RPGMakerUtils.Resources
                 return translation;
 
             // Split the string by the escape sequences, keep the escape sequences to another array
-            var splitsTranslated = EscapeRegex.Split(str).Select(s => TranslateStringUsingKeyLength(s, times, directMatch)).ToArray();
-            var escapes = EscapeRegex.Matches(str).Cast<Match>().Select(m => m.Value).ToArray();
+            var splitsTranslated = RegexUtils.EscapeRegex.Split(str).Select(s => TranslateStringUsingKeyLength(s, times, directMatch)).ToArray();
+            var escapes = RegexUtils.EscapeRegex.Matches(str).Cast<Match>().Select(m => m.Value).ToArray();
 
             // Reconstruct the string
             string result = "";
@@ -343,7 +317,7 @@ namespace RPGMakerUtils.Resources
                                     for (int j = 1; j < itemArray.Length; j++)
                                     {
                                         // If the string is not a variable or number, translate it
-                                        if (!VariableOrNumberRegex.IsMatch(itemArray[j]))
+                                        if (!RegexUtils.VariableOrNumberRegex.IsMatch(itemArray[j]))
                                             itemArray[j] = TranslateString(itemArray[j], directMatch: true);
                                     }
 
@@ -460,9 +434,9 @@ namespace RPGMakerUtils.Resources
                                 if (jobject.ContainsKey("parameters") && jobject["parameters"] is JArray parametersArray && parametersArray.Count > 0)
                                 {
                                     string comment = parametersArray[0].ToString();
-                                    if (ObjectNoteRegex.IsMatch(comment))
+                                    if (RegexUtils.ObjectNoteRegex.IsMatch(comment))
                                     {
-                                        ObjectNoteRegex.Replace(comment, match =>
+                                        RegexUtils.ObjectNoteRegex.Replace(comment, match =>
                                         {
                                             string tag = match.Groups[1].Value;     // tag name
                                             string content = match.Groups[2].Value; // text inside the tag
@@ -540,7 +514,7 @@ namespace RPGMakerUtils.Resources
                         {
                             string noteContent = jobject["note"].ToString();
 
-                            noteContent = ObjectNoteRegex.Replace(noteContent, match =>
+                            noteContent = RegexUtils.ObjectNoteRegex.Replace(noteContent, match =>
                             {
                                 string tag = match.Groups[1].Value;       // tag name
                                 string content = match.Groups[2].Value; // text inside the tag
@@ -615,7 +589,7 @@ namespace RPGMakerUtils.Resources
                     break;
                 case JTokenType.String:
                     var str = token.ToString();
-                    if (CommonPluginValueRegex.IsMatch(str))
+                    if (RegexUtils.CommonPluginValueRegex.IsMatch(str))
                         return;
 
                     // Try to parse the string as JSON array or object

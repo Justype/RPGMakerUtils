@@ -44,7 +44,8 @@
     TranslationManager._dict = null;
     TranslationManager._translatedSet = new Set();
     TranslationManager._lengthKeyDict = null;
-    TranslationManager._escapeRegex = /\\[a-zA-Z0-9_]+\[[^\]]*\]|\\\{[^}]*\}/g;
+    TranslationManager._escapeRegex = /\\[a-zA-Z0-9_]+\[[^\]]*\]|\\\{[^}]*\}/g; // Matches escape sequences like \V[1], \N[2], \{text}
+    TranslationManager._personRegex = /¡¾([^¡¿]+)¡¿|<([^>]+)>/; // Matches ¡¾Name¡¿ or <Name>
 
     TranslationManager._dictPath = null;
     TranslationManager._isDictChanged = false;
@@ -53,29 +54,42 @@
         return this._dict !== null;
     };
 
+    TranslationManager.splitKeyValueByRegex = function (key, regex, minLength = 0) {
+        value = this._dict[key];
+        if (regex.test(key) || regex.test(value)) {
+            const keyParts = key.split(regex);
+            const valueParts = value.split(regex);
+            if (keyParts.length === valueParts.length) {
+                for (let i = 0; i < keyParts.length; i++) {
+                    if (keyParts[i] && valueParts[i]) {
+                        if (keyParts[i].length <= minLength) continue; // Skip very short parts
+                        this._dict[keyParts[i]] = valueParts[i];
+                        this._translatedSet.add(valueParts[i]);
+                    }
+                }
+            }
+        }
+    }
+
     TranslationManager.initialize = function (dictionary) {
         this._dict = dictionary;
         this._translatedSet = new Set(Object.values(dictionary));
         this._translatedSet.add(""); // Ensure empty string is included
         this._dict[""] = ""; // Ensure empty string maps to itself
 
-        // use linebreaks to split text (Only if both key and value have same number of lines)
-        for (let key in this._dict) {
-            if (key.includes('\n')) {
-                const value = this._dict[key];
-                const keyLines = key.split('\n');
-                const valueLines = value.split('\n');
-                if (keyLines.length === valueLines.length) {
-                    for (let i = 0; i < keyLines.length; i++) {
-                        if (keyLines[i] && valueLines[i]) {
-                            if (keyLines[i].length <= 3) continue; // Skip very short lines
-                            this._dict[keyLines[i]] = valueLines[i];
-                            this._translatedSet.add(valueLines[i]);
-                        }
-                    }
-                }
-            }
-        }
+        // Preprocess dictionary to handle names in ¡¾¡¿ or <>
+        Object.keys(dictionary).forEach(key => {
+            this.splitKeyValueByRegex(key, this._personRegex, 0);
+        });
+        // Preprocess dictionary to handle escape sequences
+        Object.keys(dictionary).forEach(key => {
+            this.splitKeyValueByRegex(key, this._escapeRegex, 0);
+        });
+        // Preprocess dictionary to handle line breaks
+        Object.keys(dictionary).forEach(key => {
+            this.splitKeyValueByRegex(key, /\r\n|\n|\r/, 3);
+        });
+
 
         // Store keys by length for efficient partial matching
         this._lengthKeyDict = Object.keys(dictionary).reduce((acc, key) => {
