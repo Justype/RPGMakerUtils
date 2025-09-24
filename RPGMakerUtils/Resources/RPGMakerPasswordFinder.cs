@@ -23,11 +23,33 @@ namespace RPGMakerUtils.Resources
             return mapObj["displayName"].ToString();
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="mapToken">JToken from MapXX.json</param>
-        /// <returns>Password, Last N Prompts (401) Dictionary</returns>
+        private static void CollectPasswordsFromEventList(JArray list, List<(string, List<string>)> passwords)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                JObject command = list[i] as JObject;
+                if (command == null || !command.ContainsKey("code"))
+                    continue;
+
+                if (command["code"].ToObject<int>() == 103 && i + 1 < list.Count())
+                {
+                    JObject nextCommand = list[i + 1] as JObject;
+                    // Code 111 is "Input Password" (search next 5 commands for code 111)
+                    for (int j = 1; j <= 5 && (i + j) < list.Count(); j++)
+                    {
+                        nextCommand = list[i + j] as JObject;
+                        if (nextCommand != null && nextCommand.ContainsKey("code") && nextCommand["code"].ToObject<int>() == 111)
+                        {
+                            string password = nextCommand["parameters"][3].ToString();
+                            passwords.Add((password, GetLastDialogs(list, i)));
+                            break;
+                        }
+                        nextCommand = null;
+                    }
+                }
+            }
+        }
+
         public static List<(string, List<string>)> FindPasswordFromMapToken(JToken mapToken)
         {
             // MapXX.json Structure: .events[] -> .pages[] -> .list[] -> .code
@@ -57,30 +79,31 @@ namespace RPGMakerUtils.Resources
                     if (page == null || !page.ContainsKey("list"))
                         continue;
                     JArray list = page["list"] as JArray;
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        JObject command = list[i] as JObject;
-                        if (command == null || !command.ContainsKey("code"))
-                            continue;
-
-                        if (command["code"].ToObject<int>() == 103 && i + 1 < list.Count())
-                        {
-                            JObject nextCommand = list[i + 1] as JObject;
-                            // Code 111 is "Input Password" (search next 5 commands for code 111)
-                            for (int j = 1; j <= 5 && (i + j) < list.Count(); j++)
-                            {
-                                nextCommand = list[i + j] as JObject;
-                                if (nextCommand != null && nextCommand.ContainsKey("code") && nextCommand["code"].ToObject<int>() == 111)
-                                {
-                                    string password = nextCommand["parameters"][3].ToString();
-                                    passwords.Add((password, GetLastDialogs(list, i)));
-                                    break;
-                                }
-                                nextCommand = null;
-                            }
-                        }
-                    }
+                    CollectPasswordsFromEventList(list, passwords);
                 }
+            }
+
+            return passwords;
+        }
+
+        public static List<(string, List<string>)> FindPasswordFromCommonEventToken(JToken commonEventToken)
+        {
+            // CommonEvents.json Structure: .commonEvents[] -> .list[] -> .code
+            if (commonEventToken == null || commonEventToken.Type != JTokenType.Array)
+                return null;
+
+            JArray eventArray = commonEventToken as JArray;
+            List<(string, List<string>)> passwords = new List<(string, List<string>)>();
+
+            foreach (JToken eventToken in eventArray)
+            {
+                if (eventToken.Type != JTokenType.Object)
+                    continue;
+                JObject eventObject = eventToken as JObject;
+                if (!eventObject.ContainsKey("list"))
+                    continue;
+                JArray list = eventObject["list"] as JArray;
+                CollectPasswordsFromEventList(list, passwords);
             }
 
             return passwords;
@@ -133,6 +156,26 @@ namespace RPGMakerUtils.Resources
                     string json = File.ReadAllText(gameDataFile.FilePath);
                     JToken token = JToken.Parse(json);
                     var mapEvents = FindPasswordFromMapToken(token);
+                    if (mapEvents != null)
+                    {
+                        foreach (var mapEvent in mapEvents)
+                        {
+                            if (string.IsNullOrWhiteSpace(mapEvent.Item1))
+                                continue;
+
+                            passwords.Add(new PasswordDialog
+                            {
+                                Password = mapEvent.Item1,
+                                LastDialog = $"【{gameDataFile.FileName}】 {GetMapName(token)}\n" + (mapEvent.Item2 != null ? string.Join("\n", mapEvent.Item2) : "无前置对话")
+                            });
+                        }
+                    }
+                }
+                else if (gameDataFile.FileName == "CommonEvents.json")
+                {
+                    string json = File.ReadAllText(gameDataFile.FilePath);
+                    JToken token = JToken.Parse(json);
+                    var mapEvents = FindPasswordFromCommonEventToken(token);
                     if (mapEvents != null)
                     {
                         foreach (var mapEvent in mapEvents)
