@@ -279,7 +279,9 @@ namespace RPGMakerUtils.ViewModels
 
         private bool CanRestore()
         {
-            return File.Exists(GamePluginsJsBackupPath) && !IsRunning;
+            return File.Exists(GamePluginsJsBackupPath)
+                && !File.Exists(GameDataBackupZipPath) // Make sure it is not translated by TranslateViewModel
+                && !IsRunning;
         }
 
         private async Task RestoreAsync()
