@@ -193,8 +193,11 @@
         // Translate Actors' names and profiles
         if ($dataActors) {
             $dataActors.forEach(actor => {
-                if (actor && actor.name) actor.name = TranslationManager.translate(actor.name);
-                if (actor && actor.profile) actor.profile = TranslationManager.translate(actor.profile);
+                if (!actor) return;
+                if (actor.name) actor.name = TranslationManager.translate(actor.name);
+                if (actor.profile) actor.profile = TranslationManager.translate(actor.profile);
+                if (actor.nickname) actor.nickname = TranslationManager.translate(actor.nickname);
+                if (actor.note) actor.note = TranslationManager.translate(actor.note, times = 1);
             });
         }
 
@@ -203,8 +206,10 @@
         dataArrays.forEach(data => {
             if (data) {
                 data.forEach(item => {
-                    if (item && item.name) item.name = TranslationManager.translate(item.name);
-                    if (item && item.description) item.description = TranslationManager.translate(item.description);
+                    if (!item) return;
+                    if (item.name) item.name = TranslationManager.translate(item.name);
+                    if (item.description) item.description = TranslationManager.translate(item.description);
+                    if (item.note) item.note = TranslationManager.translate(item.note, times = 1);
                 });
             }
         });
@@ -212,7 +217,9 @@
         // Translate Enemies
         if ($dataEnemies) {
             $dataEnemies.forEach(enemy => {
-                if (enemy && enemy.name) enemy.name = TranslationManager.translate(enemy.name);
+                if (!enemy) return;
+                if (enemy.name) enemy.name = TranslationManager.translate(enemy.name);
+                if (enemy.note) enemy.note = TranslationManager.translate(enemy.note, times = 1);
             });
         }
 

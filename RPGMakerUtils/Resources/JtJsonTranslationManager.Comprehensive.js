@@ -202,9 +202,6 @@
     //#region Data
     // TranslationManager.translateEventCommandText = function (command) {
     //     switch (command.code) {
-    //         case 101: // first parameter is the text (character name?)
-    //             command.parameters[0] = TranslationManager.translate(command.parameters[0]);
-    //             break;
     //         case 401: // Only one parameter which is the text
     //             command.parameters[0] = TranslationManager.translate(command.parameters[0]);
     //             break;
@@ -231,7 +228,7 @@
     };
 
     // TranslationManager.translateEventCommandTextOld = function (command) {
-    //     if ([101, 401, 102, 402, 405].includes(command.code) && Array.isArray(command.parameters)) {
+    //     if ([401, 102, 402, 405].includes(command.code) && Array.isArray(command.parameters)) {
     //         command.parameters = command.parameters.map(param => {
     //             if (typeof param === 'string') {
     //                 return TranslationManager.translate(param);
@@ -275,8 +272,11 @@
         // Translate Actors' names and profiles
         if ($dataActors) {
             $dataActors.forEach(actor => {
-                if (actor && actor.name) actor.name = TranslationManager.translate(actor.name);
-                if (actor && actor.profile) actor.profile = TranslationManager.translate(actor.profile);
+                if (!actor) return;
+                if (actor.name) actor.name = TranslationManager.translate(actor.name);
+                if (actor.profile) actor.profile = TranslationManager.translate(actor.profile);
+                if (actor.nickname) actor.nickname = TranslationManager.translate(actor.nickname);
+                if (actor.note) actor.note = TranslationManager.translate(actor.note, times = 1);
             });
         }
 
@@ -285,8 +285,10 @@
         dataArrays.forEach(data => {
             if (data) {
                 data.forEach(item => {
-                    if (item && item.name) item.name = TranslationManager.translate(item.name);
-                    if (item && item.description) item.description = TranslationManager.translate(item.description);
+                    if (!item) return;
+                    if (item.name) item.name = TranslationManager.translate(item.name);
+                    if (item.description) item.description = TranslationManager.translate(item.description);
+                    if (item.note) item.note = TranslationManager.translate(item.note, times = 1);
                 });
             }
         });
@@ -294,7 +296,9 @@
         // Translate Enemies
         if ($dataEnemies) {
             $dataEnemies.forEach(enemy => {
-                if (enemy && enemy.name) enemy.name = TranslationManager.translate(enemy.name);
+                if (!enemy) return;
+                if (enemy.name) enemy.name = TranslationManager.translate(enemy.name);
+                if (enemy.note) enemy.note = TranslationManager.translate(enemy.note, times = 1);
             });
         }
 
