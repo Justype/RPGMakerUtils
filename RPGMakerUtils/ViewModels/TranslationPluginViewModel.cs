@@ -62,7 +62,7 @@ namespace RPGMakerUtils.ViewModels
             });
 
             // Plugin ComboBox
-            SelectedPluginVersion = PluginVersions.BroaderTranslation;
+            SelectedPluginVersion = PluginVersions.ComprehensiveTranslation;
             AvailablePluginVersions = new List<string>
             {
                 PluginVersions.BroaderTranslation,
@@ -205,42 +205,83 @@ namespace RPGMakerUtils.ViewModels
                 if (!File.Exists(GamePluginsJsPath))
                     return;
 
+                // Thanks @Yricky
                 // === Step 1: 备份文件 ===
                 Utils.CreateZipFromFileAsync(GamePluginsJsPath, GamePluginsJsBackupPath).Wait();
 
                 // === Step 2: 读取整个文件内容 ===
                 string content = File.ReadAllText(GamePluginsJsPath);
 
+                // === Step 3: 检查是否已添加插件 ===
+                if (content.Contains("JtJsonTranslationManager"))
+                {
+                    MessageBox.Show("插件 JtJsonTranslationManager 已存在。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // === Step 4: 提取 $plugins 数组部分 ===
+                int startIndex = content.IndexOf("var $plugins =");
+                if (startIndex == -1)
+                {
+                    MessageBox.Show("未找到 'var $plugins =' 声明。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // 找到 = 后的第一个 [ 和匹配的 ]
+                int arrayStart = content.IndexOf('[', startIndex);
+                if (arrayStart == -1)
+                {
+                    MessageBox.Show("未找到插件数组起始 '['。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // 手动匹配括号层级，找到对应的 ]
+                int bracketCount = 0;
+                int arrayEnd = -1;
+                for (int i = arrayStart; i < content.Length; i++)
+                {
+                    if (content[i] == '[') bracketCount++;
+                    else if (content[i] == ']') bracketCount--;
+
+                    if (bracketCount == 0)
+                    {
+                        arrayEnd = i;
+                        break;
+                    }
+                }
+
+                if (arrayEnd == -1)
+                {
+                    MessageBox.Show("插件数组括号不匹配。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // === Step 5: 提取数组字符串并解析 ===
+                string arrayString = content.Substring(arrayStart, arrayEnd - arrayStart + 1);
+
                 try
                 {
-                    // === Step 3: 使用正则表达式提取插件数组 ===
-                    Regex pluginRegex = new Regex(@"var\s*\$plugins\s*=\s*(?s)(?<json>\[.*\]);?", RegexOptions.Singleline);
-                    Match match = pluginRegex.Match(content);
-                    if (!match.Success)
-                    {
-                        MessageBox.Show("无法在 plugins.js 中找到插件数组", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-                    string arrayString = match.Groups["json"].Value;
-
-                    // === Step 4: 解析 JSON 数组 ===
                     JArray plugins = JArray.Parse(arrayString);
 
-                    // === Step 5: 插入新插件（作为第一个元素） ===
+                    // === Step 6: 插入新插件（作为第一个元素） ===
                     JObject newPlugin = JObject.Parse(PluginLine.TrimEnd(',')); // 移除末尾逗号，避免多余逗号
                     plugins.Insert(0, newPlugin);
 
-                    // === Step 6: 重新构建文件内容 ===
-                    string newArrayString = plugins.ToString(Formatting.None);
-                    string newContent = pluginRegex.Replace(content, $"var $plugins = {newArrayString};");
+                    // === Step 7: 重新构建文件内容 ===
+                    string newArrayString = plugins.ToString(Formatting.None); // 不要缩进，保持原风格或后续统一格式
+                                                                               // 如果你希望美化，可以用 Formatting.Indented
 
-                    // === Step 7: 写回文件 ===
+                    string newContent = content.Substring(0, arrayStart) +
+                                        newArrayString +
+                                        content.Substring(arrayEnd + 1);
+
+                    // === Step 8: 写回文件 ===
                     File.WriteAllText(GamePluginsJsPath, newContent);
 
-                    // === Step 8: 复制插件文件 ===
+                    // === Step 9: 复制插件文件 ===
                     await Utils.CopyEmbeddedFileAsync($"RPGMakerUtils.Resources.{SelectedPluginVersion}", TranslationPluginPath);
 
-                    // === Step 9: 处理 translations.json ===
+                    // === Step 10: 处理 translations.json ===
                     if (!string.IsNullOrWhiteSpace(TranslateJsonPath) && File.Exists(TranslateJsonPath))
                     {
                         var destPath = Path.Combine(GameWwwPath, "translations.json");

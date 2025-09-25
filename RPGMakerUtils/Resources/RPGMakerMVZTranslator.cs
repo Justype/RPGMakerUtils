@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Xml.Linq;
@@ -687,17 +688,43 @@ namespace RPGMakerUtils.Resources
 
         public bool TranslatePluginsJs(string pluginsJsPath)
         {
+            // Thanks @Yricky
+            string content = File.ReadAllText(pluginsJsPath);
+
+            // 提取 $plugins array
+            int startIndex = content.IndexOf("var $plugins =");
+            if (startIndex == -1)
+                return false;
+
+            // 找到 = 后的第一个 [ 和匹配的 ]
+            int arrayStart = content.IndexOf('[', startIndex);
+            if (arrayStart == -1)
+                return false;
+
+            // 手动匹配括号层级，找到对应的 ]
+            int bracketCount = 0;
+            int arrayEnd = -1;
+            for (int i = arrayStart; i < content.Length; i++)
+            {
+                if (content[i] == '[') bracketCount++;
+                else if (content[i] == ']') bracketCount--;
+
+                if (bracketCount == 0)
+                {
+                    arrayEnd = i;
+                    break;
+                }
+            }
+
+            if (arrayEnd == -1)
+                return false;
+
+            // === Step 5: 提取数组字符串并解析 ===
+            string arrayString = content.Substring(arrayStart, arrayEnd - arrayStart + 1);
+
             try
             {
-                string jsContent = File.ReadAllText(pluginsJsPath);
-                string pattern = @"var \$plugins\s*=\s*(?s)(?<json>\[.*\]);?";
-                Match match = Regex.Match(jsContent, pattern, RegexOptions.Singleline);
-                if (!match.Success)
-                    return false;
-
-                string jsonString = match.Groups["json"].Value;
-
-                JArray jsonRoot = JArray.Parse(jsonString);
+                JArray jsonRoot = JArray.Parse(arrayString);
 
                 if (jsonRoot == null || jsonRoot.Count == 0)
                     return false;
@@ -762,18 +789,21 @@ namespace RPGMakerUtils.Resources
 
                 // Replace the original JSON string with the modified one
                 string modifiedJsonString = jsonRoot.ToString(Formatting.None);
-                File.WriteAllText(
-                    pluginsJsPath,
-                    Regex.Replace(jsContent, pattern, $"var $plugins = {modifiedJsonString};", RegexOptions.Singleline)
-                );
 
-                return true;
+                string newContent = content.Substring(0, arrayStart) +
+                                    modifiedJsonString +
+                                    content.Substring(arrayEnd + 1);
+
+                // === Step 8: 写回文件 ===
+                File.WriteAllText(pluginsJsPath, newContent);
             }
             catch (Exception ex)
             {
                 Console.WriteLine("#### Translation Error: " + Environment.NewLine + ex.Message);
                 return false;
             }
+
+            return true;
         }
     }
 }
