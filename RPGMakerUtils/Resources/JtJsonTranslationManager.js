@@ -1,7 +1,7 @@
 /*:
  * @plugindesc A plugin to translate RPG Maker game text using a JSON dictionary.
  * @author Justype
- * @version 2.3.0
+ * @version 2.3.4
  *
  * @help
  * This plugin loads a 'translations.json' file from the 'www' folder and uses it to translate various text strings in the game.

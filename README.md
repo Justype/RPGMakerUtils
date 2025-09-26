@@ -10,6 +10,7 @@
    1. 翻译插件：加载我的翻译插件，并解析json文件，保存到 `www/translations.json`
       1. `Faster` 更快的翻译速度，部分菜单可能未被翻译
       2. `Broader` 更全面的翻译，速度较慢 （推荐，但在JoiPlay里面可能会出现插件菜单未翻译的情况）
+      3. `Comprehensive` 翻译最全的 **（默认模式）**
    2. 替换翻译：根据json文件，修改 `data/*json` 文件 和 `js/plugins.js` 文件
       1. 普通模式，会按白名单翻译`plugins.js`和`command356` `command357`
       2. 大范围模式，不在白名单的，且在json中的，直接翻译 （如果运行出错，请使用普通模式；如果想，可以提交Issue）
@@ -92,6 +93,12 @@ RPG Maker 的相关方法：
 2. 又为了方便使用作弊插件，常用的游戏内容（物品、技能、状态、敌人等）都在游戏加载时直接替换
 
 详细内容请查看 RPG Maker MV/MZ 的源码。就在 `js/rpg_objects.js`， `js/rpg_windows.js` 和 `js/rpg_managers.js` 文件中
+
+### Comprehensive 翻译原理
+
+`Comprehensive` 模式结合了 `Faster` 和 `Broader` 的优点
+
+不能全依靠`Broader`，有些插件自己创建了新的消息显示窗口，所以我们还是需要`Faster`的功能
 
 ## 替换翻译原理
 

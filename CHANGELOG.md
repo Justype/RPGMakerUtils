@@ -1,5 +1,13 @@
 # Version History
 
+## Version 2.3.4 RPG Maker Utils
+
+- 感谢 @Yricky 提供的代码，替换翻译也能正常解析`plugins.js`了
+- 汉化了 [paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin)，具体的翻译内容见 [Justype/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/Justype/RPG-Maker-MV-MZ-Cheat-UI-Plugin)
+- 插件翻译功能
+  - 新增了对`note`的翻译
+  - 默认使用`Comprehensive`模式，翻译更全面
+
 ## Version 2.3.3 RPG Maker Utils
 
 - 修改了插件备份逻辑，防止被杀毒软件误报
