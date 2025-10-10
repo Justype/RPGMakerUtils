@@ -1,5 +1,14 @@
 # Version History
 
+## Version 2.3.5 RPG Maker Utils
+
+- 更新了作弊脚本
+  - 恢复角色时不会再恢复TP，有些游戏会用TP做特殊用途
+  - 增加了`地图事件`选项卡，能查看地图事件位置并能点击传送
+- 详细内容请看 [Justype/RPG-Maker-MV-MZ-Cheat-UI-Plugin](https://github.com/Justype/RPG-Maker-MV-MZ-Cheat-UI-Plugin)
+
+TODO: 如果事件已经发生过了，能否显示不同的颜色？
+
 ## Version 2.3.4 RPG Maker Utils
 
 - 感谢 @Yricky 提供的代码，替换翻译也能正常解析`plugins.js`了

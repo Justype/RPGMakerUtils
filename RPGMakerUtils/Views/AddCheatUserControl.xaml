@@ -27,13 +27,16 @@
         </Grid.ColumnDefinitions>
         <TextBlock LineHeight="25" Grid.ColumnSpan="2" TextWrapping="WrapWithOverflow">
             GitHub 仓库：
+            <Hyperlink Command="{Binding HyperlinkCommand}" CommandParameter="https://github.com/Justype/RPG-Maker-MV-MZ-Cheat-UI-Plugin">
+                Justype/RPG-Maker-MV-MZ-Cheat-UI-Plugin
+            </Hyperlink> 
+            <LineBreak/>
+            &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; 基于
             <Hyperlink Command="{Binding HyperlinkCommand}" CommandParameter="https://github.com/paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin">
                 paramonos/RPG-Maker-MV-MZ-Cheat-UI-Plugin
             </Hyperlink>
             <LineBreak/>
             - 会修改游戏的 main.js 文件，<Bold>会备份到<Run Text="{Binding GameVersion, Converter={StaticResource VersionWwwPathConverter}}"/>js/main.js.zip</Bold>。
-            <LineBreak/>
-            - 如果想要恢复，解压 <Bold>main.js.zip</Bold>，选择<Bold>解压到当前文件夹</Bold>，覆盖
             <LineBreak/>
             - 进入游戏按 <Bold>Ctrl + C</Bold> 打开作弊菜单
             <LineBreak/>
